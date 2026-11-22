@@ -1,0 +1,18 @@
+<!doctype html>
+<html lang="en">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="theme-color" content="#e9dfcf"><title>A quiet afternoon · Café study</title></head>
+<body>
+  <main aria-label="A quiet afternoon in a miniature neighborhood café">
+    <header><p class="eyebrow">CAFÉ AFTER CLASS</p><h1>A little pause.</h1><p>Something cold. Somewhere warm.</p></header>
+    <canvas id="cafe" role="img" aria-label="Warm miniature café with a rounded wooden counter, two ribbed pendant lights, an iced latte on a tray, a paper order slip, pastry case and window stools."></canvas>
+    <p id="fallback" hidden>This café scene needs a browser with WebGL enabled.</p>
+    <section id="play-slip" aria-label="Your order slip" tabindex="-1"></section>
+    <p id="demo-note" hidden>10-SECOND DEMO · temporary progress only</p>
+    <nav aria-label="Café books"><button data-action="pantry">Pantry</button><button data-action="menu">Menu</button><button data-action="receipts">Receipts</button><button id="demo-toggle">Try 10-second demo</button></nav>
+    <p id="notice" role="status" aria-live="polite"></p>
+    <footer><span>Take your time.</span><span id="mode-label">SAVED IN THIS BROWSER</span></footer>
+    <dialog id="notebook" aria-labelledby="book-title"><button id="close-book" aria-label="Close book">Close ×</button><div id="book-content"></div></dialog>
+  </main>
+  <script type="module" src="/src/main.js"></script>
+<script type="module" src="/src/play.js"></script>
+</body></html>
