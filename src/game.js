@@ -1,3 +1,4 @@
+import {freshEnvironment,editEnvironment} from './environment.js';
 // Pure state transitions: time, randomness and identity are explicit inputs.
 export const INGREDIENTS = ['coffee', 'matcha', 'cocoa'];
 export const RECIPES = [
@@ -10,7 +11,7 @@ export function unlockOrderRecipes(state) {
   state.recipes.push(...unlocked);
   return unlocked;
 }
-export const fresh = () => ({ version: 1, phase: 'idle', pantry: { milk: 3, ice: 3, coffee: 0, matcha: 0, cocoa: 0 }, recipes: [], receipts: [], session: null, carry: '', reward: null, drink: null, served: 0, order: null, demoReceipts: [], queue: [], queueRevision: 0 });
+export const fresh = () => ({ version: 1, phase: 'idle', pantry: { milk: 3, ice: 3, coffee: 0, matcha: 0, cocoa: 0 }, recipes: [], receipts: [], session: null, carry: '', reward: null, drink: null, served: 0, order: null, demoReceipts: [], queue: [], queueRevision: 0, environment:freshEnvironment(), environmentUndo:null });
 export const canMake = (state, recipe) => recipeEligible(state,recipe) && Object.entries(recipe.needs).every(([key, count]) => state.pantry[key] >= count);
 // Favor a different feasible drink, then learned recipes; new recipes remain discoverable.
 export function chooseOrder(state, previous = null) {
@@ -35,6 +36,7 @@ export function recipeStatus(state, recipe) {
     swappable:recipeEligible(state,recipe) && state.phase==='counter' && missing.length===0 && state.order!==recipe.id };
 }
 export function transition(state, action, { now, id, random = 0, demo = false } = {}) {
+  if(['layout-save','layout-undo'].includes(action.type))return editEnvironment(state,action);
   // Reject an order action queued by a tab still showing an earlier guest.
   if(action.expectedServed !== undefined && action.expectedServed !== state.served)return state;
   if(action.expectedSession !== undefined && action.expectedSession !== state.session?.id)return state;

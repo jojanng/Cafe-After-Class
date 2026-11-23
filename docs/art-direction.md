@@ -87,3 +87,9 @@ Queue editing also preserves an idle form draft when a storage event refreshes t
 ## Navigation release
 
 The owner has now authorized navigation, editable interiors/exteriors and an earned shop. The old fixed-camera restriction applies to focus, not explicit Look around mode. OrbitControls runs only on the canvas while exploring: left drag orbit, right drag pan, wheel zoom; touch orbit/pinch/pan and HTML/keyboard alternatives are available. Distance, elevation and target bounds prevent losing the scene. No damping or automatic camera animation is used. Focus and leaving demo return to the quiet interior service view. A cutaway façade, patio, awning and entrance establish an actual exterior.
+
+## Decoration release
+
+Environment data uses stable object IDs, transforms and surface IDs in an additive version-1 layout. It remains separate from renderer objects and game inventory. The pure validator checks room/patio bounds, furniture clearance, wall slots, decal/window overlap and palette choices. Saves carry an expected layout revision so a stale tab cannot overwrite newer edits. One saved layout undo is retained; drafts remain UI-only until Save. Default layouts are supplied to old snapshots in memory without rewriting them on read.
+
+The service counter is a shared Three.js group containing its tray, drink, preparation gesture, ingredient packet and pastry case. The paper anchor and quiet camera target follow it. Original procedural decals, tiles and materials work indoors and outside. Navigation is disabled during edit previews to separate gestures. Test with npm test, npm run build, node test/environment-browser.cjs and node test/environment-sync.cjs against the production preview.

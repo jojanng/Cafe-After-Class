@@ -19,7 +19,7 @@ export function createNavigation({camera,canvas,draw,quietTarget=()=>new THREE.V
   function preset(which='interior'){
     view=which;canvas.dataset.view=view;
     camera.clearViewOffset();camera.fov=canvas.clientWidth<600?46:36;
-    if(which==='exterior'){controls.target.set(-1,1.8,-.5);camera.position.set(-12,8,-12);}
+    if(which==='exterior'){controls.target.set(-3,1.8,0);camera.position.set(-13,8,-12);}
     else {controls.target.copy(quietTarget());camera.position.copy(controls.target).add(new THREE.Vector3(8.2,4.3,11.55));}
     camera.updateProjectionMatrix();controls.update();draw();
   }
@@ -39,5 +39,5 @@ export function createNavigation({camera,canvas,draw,quietTarget=()=>new THREE.V
   panel.onclick=e=>{const button=e.target.closest('[data-camera]');if(button)move(button.dataset.camera);};
   canvas.addEventListener('keydown',e=>{const key={ArrowLeft:e.shiftKey?'pan-left':'left',ArrowRight:e.shiftKey?'pan-right':'right',ArrowUp:'up',ArrowDown:'down','+':'in','=':'in','-':'out',Home:'reset'}[e.key];if(key&&controls.enabled){e.preventDefault();move(key);}});
   window.addEventListener('cafe-state',({detail})=>{focus=detail.phase==='focus';toggle.disabled=focus;if(focus || (lastDemo!==undefined && lastDemo!==detail.demo))mode(false);lastDemo=detail.demo;});
-  return {resize(){if(!exploring)preset();else{camera.clearViewOffset();camera.updateProjectionMatrix();controls.update();draw();}},setEditing(value){editing=value;mode(value||exploring);},setView:preset,quiet(){mode(false);},explore(){mode(true);}};
+  return {resize(){if(!exploring)preset();else{camera.clearViewOffset();camera.updateProjectionMatrix();controls.update();draw();}},setEditing(value){editing=value;panel.querySelectorAll('button').forEach(b=>b.disabled=value);mode(value||exploring);},setView:preset,quiet(){mode(false);},explore(){mode(true);}};
 }

@@ -43,7 +43,7 @@ function render() {
   slip.innerHTML = title + body;
   if (focused) (slip.querySelector('textarea,button') || slip).focus();
   if(notebook.open && currentBook)showBook(currentBook);
-  window.dispatchEvent(new CustomEvent('cafe-state', { detail: { phase: state.phase, demo, drink: state.drink, reward: state.reward } }));
+  window.dispatchEvent(new CustomEvent('cafe-state', { detail: { phase: state.phase, demo, environment:state.environment, environmentUndo:state.environmentUndo, drink: state.drink, reward: state.reward } }));
 }
 function showBook(kind) {
   const content = notebook.querySelector('#book-content');
@@ -71,7 +71,7 @@ function receiptPickup(snapshot) {
   animation.finished.catch(()=>{}).finally(()=>paper.remove());
 }
 async function act(action) {
-  if (busy) return;
+  if (busy) return {error:'Another action is being saved.'};
   busy = true;
   const paper=action.type==='complete' ? slip.querySelector('.study-receipt') : null;
   const pickup=paper ? {paper:paper.cloneNode(true),rect:paper.getBoundingClientRect()} : null;
@@ -106,7 +106,8 @@ async function act(action) {
         card.animate([{opacity:0,transform:'translateY(10px)'},{opacity:1,transform:'translateY(0)'}], {duration:220,delay:480,easing:'ease-out',fill:'backwards'});
       }
     }
-  } catch (error) { notice.textContent = `Could not save: ${error.message} Progress was not advanced on screen.`; }
+    return {changed};
+  } catch (error) { notice.textContent = `Could not save: ${error.message} Progress was not advanced on screen.`;return {error:error.message}; }
   finally { busy = false; }
 }
 slip.addEventListener('submit', event => { event.preventDefault(); const data = new FormData(event.target); act({ type:event.submitter?.value==='queue'?'queue-add':'start', goal:data.get('goal'), minutes:Number(data.get('minutes')) }); });
@@ -147,3 +148,5 @@ window.addEventListener('storage', event => {
 document.addEventListener('visibilitychange', checkTime);
 try { state=read(localStorage,REAL_KEY); render();checkTime(); } catch(error) { notice.textContent=error.message; }
 setInterval(checkTime, 1000);
+
+window.addEventListener('cafe-command',async event=>{event.detail.done(await act(event.detail.action));});

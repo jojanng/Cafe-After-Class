@@ -1,6 +1,8 @@
 import * as THREE from 'three';
 import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
 import './style.css';
+import { createEnvironmentProjection } from './scene-environment.js';
+import { createRoomUI } from './room-ui.js';
 import { createNavigation } from './navigation.js';
 
 const canvas = document.querySelector('#cafe');
@@ -36,34 +38,42 @@ const plasterTexture=new THREE.CanvasTexture(plasterCanvas);plasterTexture.wrapS
 const plaster=mat('#ffffff',{map:plasterTexture});
 // A cropped room, not a floating dollhouse overview.
 box(14,.15,12,mat('#d0bd9f'),0,-.12,0);
-for(let z=-4;z<6;z+=.65)box(13,.008,.014,mat('#bba88f'),0,-.038,z,.002).castShadow=false;
+const floor=box(9,.025,6.5,mat('#d0bd9f'),0,0,0);
 box(9,5.6,.18,plaster,0,2.75,-3.2);
 box(12,.15,.12,wood,0,.12,-3.05);
 // A quiet walk-around exterior with an open roof/cutaway front.
-box(2.4,.08,6.5,mat('#c4b59b'),-5.65,-.015,0);
+const patio=box(2.4,.08,6.5,mat('#c4b59b'),-5.65,-.015,0);
+const facade=mat('#e2d5bd');box(9,5.6,.025,facade,0,2.75,-3.305);box(.025,5.6,6.5,facade,-4.475,2.75,0);
 box(.12,.22,6.7,wood,-6.85,.04,0);
 box(1.1,.13,4.6,mat('#7c8969'),-4.85,4.65,-.25);
+const outsideWindowStart=scene.children.length;
 box(.08,1.9,2.0,mat('#b8cbbb'),-4.51,2.6,-.25);
 for(const z of [-1.28,.78])box(.1,2,.06,dark,-4.56,2.6,z);
 for(const y of [1.6,3.6])box(.1,.06,2.12,dark,-4.56,y,-.25);
+const outsideWindowParts=scene.children.slice(outsideWindowStart);
 box(1.15,2.8,.07,wood,2.8,1.4,-3.34);box(.87,1.75,.04,mat('#b8cbbb'),2.8,1.8,-3.4);
 box(.06,.17,.07,dark,3.2,1.3,-3.46);
 // Storefront window: softly abstracted street light behind dark slender framing.
 box(.12,5.6,6.5,plaster,-4.4,2.75,0);
+const windowStart=scene.children.length;
 box(.05,3.8,4.2,mat('#dce4d4',{emissive:'#cbd9b9',emissiveIntensity:.22}),-4.31,2.65,-.25);
 for(const z of [-2.35,-.25,1.85]) box(.12,3.9,.075,dark,-4.2,2.65,z,.01);
 for(const y of [.72,4.57])box(.13,.08,4.3,dark,-4.2,y,-.25,.01);
 box(.65,.12,4.5,edge,-4.04,1.18,-.25);
+const windowParts=scene.children.slice(windowStart);const stools=[];
 for(const z of [-1.25,.75]){
+ const start=scene.children.length;
  cyl(.34,.34,.13,wood,-3.55,.79,z);
  for(const dx of [-.2,.2])for(const dz of [-.2,.2])box(.055,.73,.055,dark,-3.55+dx,.37,z+dz,.01);
- ring(.25,.018,dark,-3.55,.28,z);
+ ring(.25,.018,dark,-3.55,.28,z);stools.push(scene.children.slice(start));
 }
+const counterStart=scene.children.length;
 // Broad rounded honey counter, with fine vertical joinery.
 box(5.65,1.8,2.1,wood,.2,.88,.65,.3).receiveShadow=false;
 box(5.85,.19,2.28,edge,.2,1.85,.65,.28);
 box(5.3,.09,1.9,mat('#805b38'),.2,.09,.65,.15);
 for(let x=-2.1;x<2.35;x+=.14)box(.012,1.38,.012,mat('#a27340'),x,.92,1.72,.004).castShadow=false;
+const counterParts=scene.children.slice(counterStart);
 // Back work shelf, a quiet espresso machine and stacked cups.
 box(5.4,.12,.7,edge,.55,1.38,-2.5);
 box(1.2,.7,.55,mat('#647062'),.9,1.78,-2.45,.09);
@@ -73,6 +83,7 @@ for(const x of [.65,1.12]){box(.05,.18,.1,dark,x,1.67,-2.08);cyl(.11,.08,.14,cer
 for(const x of [1.85,2.14])for(let i=0;i<3;i++)cyl(.105,.08,.1,ceramic,x,1.49+i*.095,-2.5);
 box(2.05,.10,.43,wood,-.7,3.0,-2.92);
 for(let i=0;i<3;i++){cyl(.13,.12,.28,mat(['#b58151','#dbcfb5','#8c9579'][i]),-.05-i*.4,3.19,-2.89);}
+const displayStart=scene.children.length;
 // Black-framed pastry display, kept behind the drink rather than dominating it.
 box(1.65,.08,.77,dark,-1.6,1.99,.25);
 const glass= new THREE.MeshPhysicalMaterial({color:'#e6ece2',transparent:true,opacity:.15,roughness:.12,depthWrite:false});
@@ -82,6 +93,7 @@ for(const x of [-2.4,-.8])for(const z of [-.12,.63])box(.035,.73,.035,dark,x,2.3
 for(const y of [2.02,2.7])for(const z of [-.12,.63])box(1.66,.035,.035,dark,-1.6,y,z,.006);
 box(1.58,.025,.67,ceramic,-1.6,2.14,.25);
 for(const x of [-2.08,-1.6,-1.12]){const bun=mesh(new THREE.SphereGeometry(.19,12,8),mat('#c78c48'),x,2.26,.27);bun.scale.set(1,.65,.8);for(let i=-1;i<=1;i++)box(.018,.012,.18,mat('#e2b571'),x+i*.055,2.38,.27,.006);}
+const displayParts=scene.children.slice(displayStart);
 // Two sculpted ribbed pendants; ribs follow the shade profile.
 for(const [x,y,z] of [[-1.7,4.2,.1],[1.1,4.35,-.45]]){
  cyl(.014,.014,2,dark,x,y+1.2,z,12);
@@ -91,10 +103,11 @@ for(const [x,y,z] of [[-1.7,4.2,.1],[1.1,4.35,-.45]]){
  cyl(.47,.47,.025,mat('#ffe1a1',{emissive:'#ffc56a',emissiveIntensity:.6}),x,y-.095,z);
  const light=new THREE.PointLight('#ffcc88',10,5,2);light.position.set(x,y-.25,z);scene.add(light);
 }
+const trayStart=scene.children.length;
 // Hero tray and iced latte, intentionally tactile and slightly oversized.
 box(1.45,.075,.94,mat('#755b42'),.83,1.995,1.05,.16);
 box(1.32,.025,.81,mat('#b79a70'),.83,2.04,1.05,.12);
-const drinkStart=scene.children.length;
+const drinkStart=scene.children.length;const trayParts=scene.children.slice(trayStart);
 cyl(.255,.205,.65,mat('#d7e6dd',{transparent:true,opacity:.3,roughness:.1,side:THREE.DoubleSide,depthWrite:false}),.72,2.41,1.06);
 const drinkBody=cyl(.222,.19,.43,mat('#b98555'),.72,2.32,1.06);
 const drinkTop=cyl(.223,.223,.09,mat('#805036'),.72,2.58,1.06);
@@ -136,7 +149,7 @@ const packetTexture=new THREE.CanvasTexture(packetCanvas);packetTexture.colorSpa
 const packetLabel=new THREE.Mesh(new THREE.PlaneGeometry(.36,.36),mat('#ffffff',{map:packetTexture}));
 packetLabel.position.set(0,.27,.105);ingredientPacket.add(packetLabel);
 let arrivalFrame=0;
-function stopArrival(){cancelAnimationFrame(arrivalFrame);arrivalFrame=0;ingredientPacket.position.set(.77,2.055,1.05);}
+function stopArrival(){cancelAnimationFrame(arrivalFrame);arrivalFrame=0;ingredientPacket.position.set(.57,2.055,.4);}
 function labelPacket(ingredient){
   const p=packetCanvas.getContext('2d');p.fillStyle='#f8efda';p.fillRect(0,0,256,256);
   p.fillStyle='#62533f';p.textAlign='center';p.font='24px monospace';p.fillText('PANTRY',128,60);
@@ -146,7 +159,7 @@ window.addEventListener('cafe-ingredient-saved',()=>{
   stopArrival();if(reducedMotion.matches || !ingredientPacket.visible)return;
   const start=performance.now();
   function frame(now){const t=Math.min(1,(now-start)/420);const remaining=Math.pow(1-t,3);
-    ingredientPacket.position.set(.77-.18*remaining,2.055+.22*remaining,1.05);
+    ingredientPacket.position.set(.57-.18*remaining,2.055+.22*remaining,.4);
     renderer.render(scene,camera);if(t<1)arrivalFrame=requestAnimationFrame(frame);else arrivalFrame=0;
   }
   frame(start);
@@ -185,6 +198,7 @@ slipElement.innerHTML='<span>ONE THING</span><strong>at a time.</strong>';
 document.querySelector('main').append(slipElement);
 const slipAnchor=new THREE.Vector3(1.95,1.98,1.15);
 window.addEventListener('cafe-state', ({detail})=>{
+  if(detail.environment)projection.apply(detail.environment);
   servedPose=detail.phase==='served';prepareReady=detail.phase==='serve'; stopServeMotion();stopArrival();stopPreparation();
   ingredientPacket.visible=detail.phase==='counter' && !!detail.reward;
   if(ingredientPacket.visible)labelPacket(detail.reward);
@@ -193,11 +207,13 @@ window.addEventListener('cafe-state', ({detail})=>{
   drinkBody.material.color.set({coffee:'#b98555',matcha:'#8a9b61',cocoa:'#74503c','milk-cloud':'#e8dcc3'}[detail.drink] || '#b98555');
   drinkTop.material.color.set({coffee:'#805036',matcha:'#687b3e',cocoa:'#553d2d','milk-cloud':'#fff3df'}[detail.drink] || '#805036');
   slipElement.innerHTML=detail.phase==='counter' && detail.reward?`<span>FRESHLY EARNED</span><strong>${detail.reward}</strong>`:ready?'<span>FOR YOUR GUEST</span><strong>made with care.</strong>':'<span>ONE THING</span><strong>at a time.</strong>';
-  renderer.render(scene,camera);
+  draw();
 });
 scene.add(new THREE.HemisphereLight('#fff3da','#88745c',2.1));
 const sun=new THREE.DirectionalLight('#fff0d2',3.2);sun.position.set(-5,8,5);sun.castShadow=true;sun.shadow.mapSize.set(2048,2048);sun.shadow.camera.left=-7;sun.shadow.camera.right=7;sun.shadow.camera.top=7;sun.shadow.camera.bottom=-7;sun.shadow.normalBias=.06;sun.shadow.bias=-.0001;sun.shadow.radius=4;scene.add(sun);
-function draw(){renderer.render(scene,camera);const projected=slipAnchor.clone().project(camera);slipElement.style.left=`${(projected.x*.5+.5)*canvas.clientWidth}px`;slipElement.style.top=`${(-projected.y*.5+.5)*canvas.clientHeight}px`;}
-const navigation=createNavigation({camera,canvas,draw});
+const projection=createEnvironmentProjection({scene,serviceParts:[...counterParts,...displayParts,...trayParts,...drinkMeshes,ingredientPacket,pour],drinkOrigins,stools,windows:[windowParts,outsideWindowParts],counterParts,wood,edge,floor,patio,wall:plaster,facade});
+function draw(){renderer.render(scene,camera);const projected=projection.anchor().project(camera);slipElement.style.left=`${(projected.x*.5+.5)*canvas.clientWidth}px`;slipElement.style.top=`${(-projected.y*.5+.5)*canvas.clientHeight}px`;}
+const navigation=createNavigation({camera,canvas,draw,quietTarget:projection.target});
+createRoomUI({navigation,preview:environment=>{projection.apply(environment);draw();}});
 function resize(){stopServeMotion();stopArrival();stopPreparation();const w=canvas.clientWidth,h=canvas.clientHeight;renderer.setSize(w,h,false);camera.aspect=w/h;navigation.resize();}
 window.addEventListener('resize',resize);resize();

@@ -1,3 +1,4 @@
+import {freshEnvironment,validateEnvironment} from './environment.js';
 import { fresh, transition, chooseOrder, RECIPES, unlockOrderRecipes } from './game.js';
 export const REAL_KEY = 'cafe-after-class.progress.v1';
 export const DEMO_KEY = 'cafe-after-class.demo.v1';
@@ -12,6 +13,8 @@ export function read(storage, key) {
     throw new Error('Saved progress could not be read. It has been kept untouched.');
   }
   if(!Number.isInteger(s.served) || s.served<0)throw new Error('Saved order progress could not be read. It has been kept untouched.');
+  s.environment ??= freshEnvironment();s.environmentUndo ??= null;validateEnvironment(s.environment);
+  if(s.environmentUndo)validateEnvironment(s.environmentUndo);
   unlockOrderRecipes(s);
   s.queue ??= []; s.queueRevision ??= 0;
   if(!Array.isArray(s.queue) || s.queue.length>3 || !Number.isInteger(s.queueRevision) || s.queueRevision<0 ||

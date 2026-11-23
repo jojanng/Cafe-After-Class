@@ -82,3 +82,9 @@ For a quick review, enter the demo, save two goals to the queue, and choose **St
 ## Look around
 
 Choose **Look around** to enable canvas navigation. Drag to orbit, right-drag to pan, and wheel to zoom. On touch use one finger to orbit or two fingers to pan/pinch. The paper camera controls and focused-canvas arrow keys, Shift+arrows and +/− offer alternatives. Interior, Exterior and Reset view restore bounded framing. Focus always returns to the quiet interior and disables navigation. Run `node test/navigation-browser.cjs` with the production preview running.
+
+## Decorate
+
+Choose **Decorate**, select an object, and edit its position/rotation/finish. The service counter carries its tray, glass, pastry case and paper with it. Interior stools and the exterior patio bench move on their respective floors. Interior/exterior windows and wall decals can switch between left/rear walls and move along them. Expand **Floor tiles & wall paint** for independent interior floor, patio, interior wall and exterior wall finishes.
+
+Edits are previews until **Save decoration**. **Cancel changes** restores the saved layout; **Undo last saved edit** restores one earlier layout. Bounds, furniture overlap and window/decal overlap are rejected. Counter rotation is limited to 0°/180° for the work aisle; other furniture uses quarter turns. Wall features retain their size/height. This is a bounded cutaway café, not arbitrary architectural construction. Camera gestures are held while decorating and editing is unavailable during focus. Layouts persist in the same browser save and remain isolated in demo mode.
