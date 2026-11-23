@@ -215,7 +215,7 @@ const sun=new THREE.DirectionalLight('#fff0d2',3.2);sun.position.set(-5,8,5);sun
 const projection=createEnvironmentProjection({scene,serviceParts:[...counterParts,...displayParts,...trayParts,...drinkMeshes,ingredientPacket,pour],drinkOrigins,stools,windows:[windowParts,outsideWindowParts],counterParts,wood,edge,floor,patio,wall:plaster,facade});
 function draw(){renderer.render(scene,camera);const projected=projection.anchor().project(camera);slipElement.style.left=`${(projected.x*.5+.5)*canvas.clientWidth}px`;slipElement.style.top=`${(-projected.y*.5+.5)*canvas.clientHeight}px`;}
 const navigation=createNavigation({camera,canvas,draw,quietTarget:projection.target});
-createRoomUI({navigation,preview:environment=>{projection.apply(environment);draw();}});
+createRoomUI({navigation,scene,camera,canvas,groups:projection.groups,draw,preview:environment=>{projection.apply(environment);draw();}});
 createShopUI();
 function resize(){stopServeMotion();stopArrival();stopPreparation();const w=canvas.clientWidth,h=canvas.clientHeight;renderer.setSize(w,h,false);camera.aspect=w/h;navigation.resize();}
 window.addEventListener('resize',resize);resize();

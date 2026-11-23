@@ -8,7 +8,7 @@ export function createShopUI(){
  book.querySelector('#demo-supplies')?.addEventListener('click',()=>buy({type:'demo-supplies'}));
  book.querySelectorAll('[data-buy]').forEach(b=>b.onclick=()=>buy({type:'purchase',catalogId:b.dataset.buy}));
  }
- async function buy(action){if(busy)return;busy=true;const result=await command(action);busy=false;book.querySelector('#shop-status').textContent=result?.error || (result?.changed?'Saved. Furnishings and tiles are in Decorate; recipes are in Menu.':'Already received. No coins spent.');book.querySelector('#close-shop').focus();}
+ async function buy(action){if(busy)return;busy=true;const result=await command(action);busy=false;book.querySelector('#shop-status').textContent=result?.error || (result?.changed?'Saved. Furnishings and tiles are in Backstore; recipes are in Menu.':'Already received. No coins spent.');book.querySelector('#close-shop').focus();}
  button.onclick=()=>{if(state?.phase==='focus')return;render();book.showModal();};
  book.addEventListener('cancel',e=>{if(busy)e.preventDefault();});
  window.addEventListener('cafe-state',({detail})=>{const changedMode=state&&state.demo!==detail.demo;state=detail;button.disabled=state.phase==='focus';if(book.open){if(changedMode||state.phase==='focus')book.close();else render();}});

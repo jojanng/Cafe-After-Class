@@ -1,9 +1,10 @@
+import {FLOOR_BOUNDS,SHAPES} from './placement-model.js';
 // Persisted layout IDs are independent of Three.js objects and shop catalogue IDs.
 export const PAINTS={honey:'#b58045',walnut:'#76543c',sage:'#8b9877',clay:'#b8785c',cream:'#e2d5bd',charcoal:'#383a32'};
 export const FLOOR_STYLES=['oak','stone','cream-tile','terracotta'];
 export const LAYOUT_ITEMS={
- 'reading-table':{name:'Reading table',kind:'furniture',area:'interior',shopItem:'reading-table',size:[1.1,.85]},
- 'patio-planter':{name:'Patio planter',kind:'furniture',area:'exterior',shopItem:'patio-planter',size:[.65,.65]},
+ 'reading-table':{name:'Reading table',kind:'furniture',area:'interior',shopItem:'reading-table'},
+ 'patio-planter':{name:'Patio planter',kind:'furniture',area:'exterior',shopItem:'patio-planter'},
  counter:{name:'Service counter',kind:'counter',area:'interior'},
  'stool-a':{name:'Window stool A',kind:'furniture',area:'interior'},
  'stool-b':{name:'Window stool B',kind:'furniture',area:'interior'},
@@ -29,22 +30,25 @@ export function validateEnvironment(env,owned=[]) {
  const boxes=[];
  for(const [id,info] of Object.entries(LAYOUT_ITEMS)){
   const item=env.items[id];if(!item || !PAINTS[item.color])throw Error('Choose a valid finish.');
-  if(info.shopItem){if(typeof item.placed!=='boolean')throw Error('Choose whether to place the owned furniture.');if(!item.placed)continue;if(!owned.includes(info.shopItem))throw Error('Buy this furnishing in the shop before placing it.');}
+  if(item.placed!==undefined && typeof item.placed!=='boolean')throw Error('Invalid placed state.');
+  if(id==='counter' && item.placed===false)throw Error('The service counter must stay placed.');
+  if(info.shopItem){if(typeof item.placed!=='boolean')throw Error('Choose whether to place the owned furniture.');if(item.placed&&!owned.includes(info.shopItem))throw Error('Buy this furnishing in the shop before placing it.');}
   if(['window','decal'].includes(info.kind)){
    const limit=info.kind==='decal'?3:info.area==='interior'?.5:1.4;
    if(!['left','rear'].includes(item.slot) || !Number.isFinite(item.offset) || Math.abs(item.offset)>limit)throw Error(`${info.name} is outside its wall slots.`);
   }else{
    if(![item.x,item.z].every(Number.isFinite) || ![0,90,180,270].includes(item.rotation))throw Error('Use finite coordinates and quarter turns.');
    if(info.kind==='counter' && ![0,180].includes(item.rotation))throw Error('The service counter supports 0° or 180° to preserve the work aisle.');
-   let w=info.size?.[0] || (id==='counter'?5.85:id==='bench'?1.45:.7),d=info.size?.[1] || (id==='counter'?2.28:id==='bench'?.65:.7);
+   if(item.placed===false)continue;
+   let [w,d]=SHAPES[id];
    if(item.rotation%180)[w,d]=[d,w];
-   const b={id,area:info.area,x:item.x,z:item.z,w:w/2,d:d/2};const bounds=info.area==='interior'?[-4.1,4.2,-2,3.7]:[-6.8,-4.6,-3,3.25];
+   const b={id,area:info.area,x:item.x,z:item.z,w:w/2,d:d/2};const bounds=FLOOR_BOUNDS[info.area];
    if(b.x-b.w<bounds[0] || b.x+b.w>bounds[1] || b.z-b.d<bounds[2] || b.z+b.d>bounds[3])throw Error(`${info.name} must stay on its ${info.area==='interior'?'room floor':'patio'}.`);
    if(boxes.some(a=>a.area===b.area && Math.abs(a.x-b.x)<a.w+b.w+.08 && Math.abs(a.z-b.z)<a.d+b.d+.08))throw Error('Leave space between furniture and the service counter.');
    boxes.push(b);
   }
  }
- for(const area of ['inside','outside']){const w=env.items[`window-${area}`],d=env.items[`decal-${area}`];if(w.slot===d.slot && Math.abs(w.offset-d.offset)<(area==='inside'?2.65:1.5))throw Error('Move the wall decal clear of the window.');}
+ for(const area of ['inside','outside']){const w=env.items[`window-${area}`],d=env.items[`decal-${area}`];if(w.placed!==false && d.placed!==false && w.slot===d.slot && Math.abs(w.offset-d.offset)<(area==='inside'?2.65:1.5))throw Error('Move the wall decal clear of the window.');}
  if([env.surfaces.floor,env.surfaces.patio].includes('terracotta')&&!owned.includes('terracotta-tiles'))throw Error('Buy terracotta tiles in the shop before using them.');
  if(!FLOOR_STYLES.includes(env.surfaces.floor)||!FLOOR_STYLES.includes(env.surfaces.patio)||!PAINTS[env.surfaces.wall]||!PAINTS[env.surfaces.facade])throw Error('Choose an available surface finish.');
  return true;

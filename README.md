@@ -109,3 +109,15 @@ npm run dev
 ```
 
 Open the localhost URL printed by Vite on your own Windows computer. For an existing checkout use `git switch develop` then `git pull --ff-only origin develop`, `npm ci`, and `npm run dev`. For a production check use `npm test`, `npm run build`, and `npm run preview`. Dev and preview ports use separate browser saves. No deployment is required.
+
+## Direct placement and Backstore
+
+Open **Backstore** to browse tables, counters, machines, windows, decals, tiles, plants and seating. It lists existing owned pieces as **Stored** or **Placed**; empty categories stay empty. Recipes remain in Menu. Buy furnishings in Shop, then choose **Place** in Backstore. Repositioning uses the same piece, never a duplicate. Tiles are reusable finishes for the whole interior floor or exterior patio.
+
+Choose **Decorate**, or Place/Reposition in Backstore. Click a visible piece in the scene and drag it: floor items snap to a 0.25-unit grid, wall items to a 0.1-unit wall slot. Only the relevant floor/patio or wall grid is shown. A green outline and “Valid” mean it can be confirmed; a red cross and “Invalid” explain blocked bounds/collisions. Release only previews. Use **Rotate piece**, or R while the canvas is focused; **Confirm placement** saves. **Cancel changes** discards the draft and **Undo last saved edit** restores one prior layout. The counter and attached service tray/paper remain functional after moving.
+
+Numeric fields and selects provide a keyboard alternative. Uncheck **Placed** to store a piece again (the working counter cannot be stored). Camera gestures are disabled while editing; use the explicit view buttons or cancel and choose Look around to reframe. Opening Backstore preserves framing. One-finger dragging works on touch; two-finger gestures cancel an active item drag rather than moving it. Focus has no editing overlays. Mobile controls sit below the café; scroll back to the scene to drag.
+
+Additional verification: `node test/placement-browser.cjs` against `npm run preview`. The current catalogue and bounded shell remain intentionally small; there is no free-form wall construction or per-tile painting.
+
+`node test/placement-interruption.cjs` covers lost capture, keyboard rotation and a real purchase/place/store/re-place across reloads. `node test/placement-mobile-layout.cjs` checks mobile control flow and exterior grids. These Cloud scripts require the same production preview and Linux Chromium setup as the earlier browser checks.

@@ -24,7 +24,7 @@ export function createNavigation({camera,canvas,draw,quietTarget=()=>new THREE.V
     camera.updateProjectionMatrix();controls.update();draw();
   }
   function mode(value){exploring=!!value&&!focus;controls.enabled=exploring&&!editing;canvas.style.touchAction=controls.enabled?'none':'auto';canvas.tabIndex=controls.enabled?0:-1;panel.hidden=!exploring;toggle.textContent=exploring?'Return to study view':'Look around';toggle.setAttribute('aria-pressed',String(exploring));document.body.classList.toggle('exploring',exploring);if(!exploring)preset();window.dispatchEvent(new CustomEvent('cafe-navigation',{detail:{exploring,editing,view}}));}
-  toggle.onclick=()=>mode(!exploring);
+  toggle.onclick=()=>{if(!editing)mode(!exploring);};
   function move(command){if(!controls.enabled)return;
     if(['interior','exterior'].includes(command))return preset(command);
     if(command==='reset')return preset(view);
@@ -38,6 +38,6 @@ export function createNavigation({camera,canvas,draw,quietTarget=()=>new THREE.V
   }
   panel.onclick=e=>{const button=e.target.closest('[data-camera]');if(button)move(button.dataset.camera);};
   canvas.addEventListener('keydown',e=>{const key={ArrowLeft:e.shiftKey?'pan-left':'left',ArrowRight:e.shiftKey?'pan-right':'right',ArrowUp:'up',ArrowDown:'down','+':'in','=':'in','-':'out',Home:'reset'}[e.key];if(key&&controls.enabled){e.preventDefault();move(key);}});
-  window.addEventListener('cafe-state',({detail})=>{focus=detail.phase==='focus';toggle.disabled=focus;if(focus || (lastDemo!==undefined && lastDemo!==detail.demo))mode(false);lastDemo=detail.demo;});
-  return {resize(){if(!exploring)preset();else{camera.clearViewOffset();camera.updateProjectionMatrix();controls.update();draw();}},setEditing(value){editing=value;panel.querySelectorAll('button').forEach(b=>b.disabled=value);mode(value||exploring);},setView:preset,quiet(){mode(false);},explore(){mode(true);}};
+  window.addEventListener('cafe-state',({detail})=>{focus=detail.phase==='focus';toggle.disabled=focus||editing;if(focus || (lastDemo!==undefined && lastDemo!==detail.demo))mode(false);lastDemo=detail.demo;});
+  return {resize(){if(!exploring&&!editing)preset();else{camera.clearViewOffset();camera.updateProjectionMatrix();controls.update();draw();}},setEditing(value){editing=value;controls.enabled=exploring&&!editing&&!focus;toggle.disabled=editing||focus;panel.hidden=editing||!exploring;canvas.style.touchAction=editing||controls.enabled?'none':'auto';canvas.tabIndex=editing||controls.enabled?0:-1;},setView:preset,quiet(){mode(false);},explore(){mode(true);}};
 }
