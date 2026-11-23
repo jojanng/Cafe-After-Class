@@ -1,10 +1,7 @@
 import * as THREE from 'three';
 import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
-import {RoomEnvironment} from 'three/addons/environments/RoomEnvironment.js';
-import {createServiceCorner} from './service-corner.js';
 import {createIngredientReward} from './service-counter.js';
-import {createCafeShell,paperPendant} from './corner-shell.js';
-import {GUEST_GLASS, GUEST_RECEIPT, PASTRY_CASE, WORKTOP_Y, frameFixedCamera} from './fixed-room.js';
+import {createReviewLayout, frameReviewCamera, positionReviewDrink, reviewGlassScale} from './review-layout.js';
 import './style.css';
 
 const canvas = document.querySelector('#cafe');
@@ -14,34 +11,22 @@ catch { document.querySelector('#fallback').hidden = false; throw new Error('Web
 renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
 renderer.shadowMap.enabled = true;
 renderer.shadowMap.type = THREE.PCFShadowMap;
-renderer.setClearColor('#ddd5c9');
-renderer.toneMapping = THREE.ACESFilmicToneMapping;
-renderer.toneMappingExposure = .99;
+renderer.setClearColor('#E5E3DD');
 const scene = new THREE.Scene();
-// A small studio reflection gives nickel and glazed stoneware a readable curved edge.
-const studio = new RoomEnvironment();
-const reflections = new THREE.PMREMGenerator(renderer);
-const metalReflections = reflections.fromScene(studio, 0, .1, 100, {size: 32}).texture;
-studio.dispose();
-reflections.dispose();
-
-const camera = new THREE.PerspectiveCamera(36, 1, .1, 60);
+// The review link selects a camera once. Both views use the same scene and game state.
+const planView=new URLSearchParams(location.search).get('review')==='plan';
+const camera=planView ? new THREE.OrthographicCamera(-5,5,4,-4,.1,60) : new THREE.PerspectiveCamera(36,1,.1,60);
 const mat = (color, extra = {}) => new THREE.MeshStandardMaterial({ color, roughness: .8, ...extra });
 const ceramic = mat('#eee6d6');
 const mesh = (geo, material, x, y, z, parent=scene) => {
   const m = new THREE.Mesh(geo, material); m.position.set(x,y,z); m.castShadow = true; m.receiveShadow = true; parent.add(m); return m;
 };
-createCafeShell(scene);
-const {prepSurface, contactShade} = createServiceCorner(scene, metalReflections);
-paperPendant(scene,-1.84,3.94,.11);
-paperPendant(scene,.83,4.12,-.48);
+const {prepSurface,guestGlass,receipt}=createReviewLayout(scene);
+const contactShade=new THREE.MeshBasicMaterial({color:'#71695D',transparent:true,depthWrite:false});
 const prepPoint = prepSurface.getWorldPosition(new THREE.Vector3());
-const guestGlass = new THREE.Vector3(...GUEST_GLASS);
-const serviceSlide = guestGlass.clone().sub(prepPoint);
-const receiptAnchor = new THREE.Vector3(...GUEST_RECEIPT);
-const caseCorner = new THREE.Vector3(PASTRY_CASE.x-PASTRY_CASE.width/2-.02,WORKTOP_Y,PASTRY_CASE.z+PASTRY_CASE.depth/2+.02);
 // Model the glass from its foot. Filling and sliding move the same glass.
 const drink = new THREE.Group(); scene.add(drink); drink.visible = false;
+drink.scale.setScalar(reviewGlassScale);
 const bodyHeight = .43, topHeight = .09, liquidBottom = .052;
 const glassRadius=.255, glassHeight=.68;
 mesh(new THREE.CylinderGeometry(glassRadius,.205,glassHeight,32),mat('#d7e6dd',{transparent:true,opacity:.3,roughness:.1,side:THREE.DoubleSide,depthWrite:false}),0,glassHeight/2,0,drink);
@@ -58,10 +43,7 @@ straw.rotation.z=-.14;
 const reducedMotion=matchMedia('(prefers-reduced-motion: reduce)');
 let serveFrame=0, servedPose=false;
 function poseDrink(progress) {
-  drink.position.copy(prepPoint).addScaledVector(serviceSlide,progress);
-  // Lift just enough to clear the pan wall on the way to the customer.
-  const travel = Math.min(1,progress);
-  drink.position.y = THREE.MathUtils.lerp(prepPoint.y,GUEST_GLASS[1],travel) + .18*Math.sin(Math.PI*travel);
+  positionReviewDrink(drink.position,prepPoint,guestGlass,progress);
 }
 function stopServeMotion() {
   cancelAnimationFrame(serveFrame); serveFrame=0;
@@ -133,6 +115,7 @@ const slipElement=document.createElement('div');
 slipElement.className='order-slip';
 slipElement.setAttribute('aria-hidden','true');
 slipElement.hidden=true;
+if(planView) slipElement.style.transform='translate(-50%,-50%)';
 canvas.parentElement.append(slipElement);
 window.addEventListener('cafe-state', ({detail})=>{
   servedPose=detail.phase==='served';prepareReady=detail.phase==='serve'; stopServeMotion();stopArrival();stopPreparation();
@@ -149,18 +132,13 @@ window.addEventListener('cafe-state', ({detail})=>{
 // A fixed composition: pointer, wheel and keyboard never change the camera.
 function draw(){
   renderer.render(scene,camera);
-  // Fit the paper between the projected rim of the drink and the nearest case foot.
-  const toPixel=x=>(x*.5+.5)*canvas.clientWidth;
-  const rim=guestGlass.clone().add(new THREE.Vector3(glassRadius,0,0).applyQuaternion(camera.quaternion));
-  rim.y+=glassHeight;
-  const left=toPixel(rim.project(camera).x)+5;
-  const right=toPixel(caseCorner.clone().project(camera).x)-5;
-  const width=Math.min(116,Math.max(1,right-left));
-  const projected=receiptAnchor.clone().project(camera);
-  const center=THREE.MathUtils.clamp(toPixel(projected.x),left+width/2,right-width/2);
+  // Keep the original paper overlay attached to its own guest-side spot on the curved slab.
+  const center=receipt.getWorldPosition(new THREE.Vector3()).project(camera);
+  const edge=receipt.localToWorld(new THREE.Vector3(.335,0,0)).project(camera);
+  const width=THREE.MathUtils.clamp(Math.abs(edge.x-center.x)*canvas.clientWidth,32,116);
   slipElement.style.setProperty('--paper-width',width+'px');
-  slipElement.style.left=`${center}px`;
-  slipElement.style.top=`${(-projected.y*.5+.5)*canvas.clientHeight}px`;
+  slipElement.style.left=`${(center.x*.5+.5)*canvas.clientWidth}px`;
+  slipElement.style.top=`${(-center.y*.5+.5)*canvas.clientHeight}px`;
 }
 let viewWidth=0, viewHeight=0;
 function resize(){
@@ -169,7 +147,7 @@ function resize(){
   viewWidth=w; viewHeight=h;
   stopServeMotion();stopArrival();stopPreparation();
   renderer.setSize(w,h,false);
-  frameFixedCamera(camera,w,h);
+  frameReviewCamera(camera,w,h);
   draw();
 }
 new ResizeObserver(resize).observe(canvas);
