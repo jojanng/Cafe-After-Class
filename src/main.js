@@ -87,12 +87,64 @@ box(1.32,.025,.81,mat('#b79a70'),.83,2.04,1.05,.12);
 const drinkStart=scene.children.length;
 cyl(.255,.205,.65,mat('#d7e6dd',{transparent:true,opacity:.3,roughness:.1,side:THREE.DoubleSide,depthWrite:false}),.72,2.41,1.06);
 const drinkBody=cyl(.222,.19,.43,mat('#b98555'),.72,2.32,1.06);
-cyl(.223,.223,.09,mat('#805036'),.72,2.58,1.06);
+const drinkTop=cyl(.223,.223,.09,mat('#805036'),.72,2.58,1.06);
 ring(.25,.013,mat('#eff8ed',{transparent:true,opacity:.8}),.72,2.735,1.06);
 for(const [dx,dz,a] of [[-.09,-.06,.2],[.08,-.04,.7],[.01,.12,.4]]){const ice=box(.16,.13,.16,mat('#d3dfce',{transparent:true,opacity:.72,roughness:.22}),.72+dx,2.66,1.06+dz,.025);ice.rotation.y=a;}
 const straw=cyl(.018,.018,.72,mat('#e8ddbf'),.83,2.89,1.04,12);straw.rotation.z=-.14;
 const drinkMeshes=scene.children.slice(drinkStart);
 drinkMeshes.forEach(m=>m.visible=false);
+const drinkOrigins=drinkMeshes.map(m=>m.position.clone());
+const reducedMotion=matchMedia('(prefers-reduced-motion: reduce)');
+let serveFrame=0, servedPose=false;
+function poseDrink(progress) {
+  drinkMeshes.forEach((m,i)=>m.position.copy(drinkOrigins[i]).addScaledVector(new THREE.Vector3(-.65,-.1,.32),progress));
+}
+function stopServeMotion() {
+  cancelAnimationFrame(serveFrame); serveFrame=0;
+  poseDrink(servedPose ? 1 : 0);
+}
+window.addEventListener('cafe-serve-saved', ()=>{
+  stopServeMotion();
+  if (reducedMotion.matches || !servedPose) return;
+  const start=performance.now();
+  poseDrink(0);
+  function frame(now) {
+    const t=Math.min(1,(now-start)/560);
+    // Slow into a tiny overshoot, then settle without moving the camera or liquid.
+    const progress=t<.82 ? 1.025*(1-Math.pow(1-t/.82,3)) : 1+.025*Math.pow((1-t)/.18,2);
+    poseDrink(progress);renderer.render(scene,camera);
+    if(t<1) serveFrame=requestAnimationFrame(frame); else serveFrame=0;
+  }
+  serveFrame=requestAnimationFrame(frame);
+});
+// One original paper ingredient packet; state rendering sets its final pose.
+const ingredientPacket=new THREE.Group();scene.add(ingredientPacket);
+const packetBody=new THREE.Mesh(new RoundedBoxGeometry(.43,.5,.2,2,.025),mat('#d9be8d'));
+packetBody.position.y=.25;packetBody.castShadow=true;ingredientPacket.add(packetBody);
+const packetCanvas=document.createElement('canvas');packetCanvas.width=256;packetCanvas.height=256;
+const packetTexture=new THREE.CanvasTexture(packetCanvas);packetTexture.colorSpace=THREE.SRGBColorSpace;
+const packetLabel=new THREE.Mesh(new THREE.PlaneGeometry(.36,.36),mat('#ffffff',{map:packetTexture}));
+packetLabel.position.set(0,.27,.105);ingredientPacket.add(packetLabel);
+let arrivalFrame=0;
+function stopArrival(){cancelAnimationFrame(arrivalFrame);arrivalFrame=0;ingredientPacket.position.set(.77,2.055,1.05);}
+function labelPacket(ingredient){
+  const p=packetCanvas.getContext('2d');p.fillStyle='#f8efda';p.fillRect(0,0,256,256);
+  p.fillStyle='#62533f';p.textAlign='center';p.font='24px monospace';p.fillText('PANTRY',128,60);
+  p.font='34px Georgia';p.fillText(ingredient,128,133);p.font='24px monospace';p.fillText('+ 1',128,198);packetTexture.needsUpdate=true;
+}
+window.addEventListener('cafe-ingredient-saved',()=>{
+  stopArrival();if(reducedMotion.matches || !ingredientPacket.visible)return;
+  const start=performance.now();
+  function frame(now){const t=Math.min(1,(now-start)/420);const remaining=Math.pow(1-t,3);
+    ingredientPacket.position.set(.77-.18*remaining,2.055+.22*remaining,1.05);
+    renderer.render(scene,camera);if(t<1)arrivalFrame=requestAnimationFrame(frame);else arrivalFrame=0;
+  }
+  frame(start);
+});
+reducedMotion.addEventListener('change',()=>{
+  stopServeMotion();stopArrival();renderer.render(scene,camera);
+  if(reducedMotion.matches) document.getAnimations().forEach(a=>a.finish());
+});
 const slipElement=document.createElement('div');
 slipElement.className='order-slip';
 slipElement.setAttribute('aria-hidden','true');
@@ -100,13 +152,17 @@ slipElement.innerHTML='<span>ONE THING</span><strong>at a time.</strong>';
 document.querySelector('main').append(slipElement);
 const slipAnchor=new THREE.Vector3(1.95,1.98,1.15);
 window.addEventListener('cafe-state', ({detail})=>{
+  servedPose=detail.phase==='served'; stopServeMotion();stopArrival();
+  ingredientPacket.visible=detail.phase==='counter' && !!detail.reward;
+  if(ingredientPacket.visible)labelPacket(detail.reward);
   const ready=['serve','served'].includes(detail.phase);
   drinkMeshes.forEach(m=>m.visible=ready);
   drinkBody.material.color.set({coffee:'#b98555',matcha:'#8a9b61',cocoa:'#74503c'}[detail.drink] || '#b98555');
-  slipElement.innerHTML=detail.phase==='counter'?`<span>FRESHLY EARNED</span><strong>${detail.reward}</strong>`:ready?'<span>FOR YOUR GUEST</span><strong>made with care.</strong>':'<span>ONE THING</span><strong>at a time.</strong>';
+  drinkTop.material.color.set({coffee:'#805036',matcha:'#687b3e',cocoa:'#553d2d'}[detail.drink] || '#805036');
+  slipElement.innerHTML=detail.phase==='counter' && detail.reward?`<span>FRESHLY EARNED</span><strong>${detail.reward}</strong>`:ready?'<span>FOR YOUR GUEST</span><strong>made with care.</strong>':'<span>ONE THING</span><strong>at a time.</strong>';
   renderer.render(scene,camera);
 });
 scene.add(new THREE.HemisphereLight('#fff3da','#88745c',2.1));
 const sun=new THREE.DirectionalLight('#fff0d2',3.2);sun.position.set(-5,8,5);sun.castShadow=true;sun.shadow.mapSize.set(2048,2048);sun.shadow.camera.left=-7;sun.shadow.camera.right=7;sun.shadow.camera.top=7;sun.shadow.camera.bottom=-7;sun.shadow.normalBias=.06;sun.shadow.bias=-.0001;sun.shadow.radius=4;scene.add(sun);
-function resize(){const w=canvas.clientWidth,h=canvas.clientHeight;renderer.setSize(w,h,false);camera.aspect=w/h;const mobile=w<600;camera.fov=mobile?43:36;camera.position.set(mobile?7.8:8.2,mobile?6.2:6.3,mobile?11.8:11.8);camera.lookAt(mobile?.05:0, mobile?2.15:2.0,.25);if(mobile){camera.position.set(8.8,6.9,13.5);camera.setViewOffset(w,h,0,-h*.07,w,h);}else camera.clearViewOffset();camera.updateProjectionMatrix();renderer.render(scene,camera);const projected=slipAnchor.clone().project(camera);slipElement.style.left=`${(projected.x*.5+.5)*w}px`;slipElement.style.top=`${(-projected.y*.5+.5)*h}px`;}
+function resize(){stopServeMotion();stopArrival();const w=canvas.clientWidth,h=canvas.clientHeight;renderer.setSize(w,h,false);camera.aspect=w/h;const mobile=w<600;camera.fov=mobile?43:36;camera.position.set(mobile?7.8:8.2,mobile?6.2:6.3,mobile?11.8:11.8);camera.lookAt(mobile?.05:0, mobile?2.15:2.0,.25);if(mobile){camera.position.set(8.8,6.9,13.5);camera.setViewOffset(w,h,0,-h*.07,w,h);}else camera.clearViewOffset();camera.updateProjectionMatrix();renderer.render(scene,camera);const projected=slipAnchor.clone().project(camera);slipElement.style.left=`${(projected.x*.5+.5)*w}px`;slipElement.style.top=`${(-projected.y*.5+.5)*h}px`;}
 window.addEventListener('resize',resize);resize();

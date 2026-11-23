@@ -24,7 +24,7 @@ Open http://localhost:4173. Dev and preview ports have separate browser storage.
 
 1. On the paper slip, write a goal and select 25 or 45 minutes. Begin focus. Refreshing or switching tabs preserves the deadline.
 2. When time ends, confirm the goal is complete to earn one random coffee, matcha, or cocoa. If unfinished, carry it forward without a reward; the next slip keeps the goal. Receipts record real completed/carried sessions.
-3. Make an available drink with one flavor, one milk, and one ice. The starter pantry has three milk and three ice. Each completed focus session restocks those basics to at least one.
+3. The earned ingredient arrives as a labeled packet on the tray. Open the paper menu to see unlocked recipes, available drinks, and missing ingredients. Make an available drink with one flavor, one milk, and one ice. The starter pantry has three milk and three ice. Each completed focus session restocks those basics to at least one.
 4. Serve the drink to the single guest. Open Menu to see the recipe you learned. Write another goal to continue.
 
 For a quick review choose **Try 10-second demo**, write a practice goal, wait 10 seconds, confirm, make, serve, and see the menu. **Leave demo** restores real progress unchanged. Demo entry starts a fresh temporary pantry, never writes real receipts, and never unlocks real recipes. Reload exits demo. On narrow phones scroll down from the café to the paper and book buttons.
@@ -50,3 +50,13 @@ npm run test:browser
 The browser check uses Playwright with `/usr/bin/chromium` by default. Override `CHROMIUM_PATH`, `CAFE_URL`, or `CAFE_ARTIFACTS` as needed. Captures default to ignored `artifacts/`. Unit tests cover all eligible first drops, 45-minute deadlines, refresh persistence, repeated actions, carry-forward, demo isolation, and storage errors. Browser checks exercise real start/reload/carry plus the full 10-second demo at 1440×1000 and 390×844; a controlled clock tests real completion and competing tabs. No 25/45-minute wall-clock endurance run, physical-phone performance, Safari, or Firefox verification. Three.js produces Vite's >500 KB initial bundle advisory (~132 KB gzip).
 
 Read [art direction](docs/art-direction.md) before extending. No commit, push, PR, or deployment is part of this milestone.
+
+The small menu retains iced latte, iced matcha latte, and iced cocoa with the original save keys (no migration). Batch-one browser checks: `node test/ingredient-menu.cjs` and `node test/menu-save-sync.cjs`, with the production preview running.
+
+## Rotating orders
+
+The counter slip now names one order. Make and serve it to advance the guest count. If another drink is feasible, **Take the next order** continues immediately; otherwise **Write the next goal** starts restocking through study. New orders favor a different feasible drink and learned recipes, while ready unlearned drinks remain discoverable.
+
+**Swap to another ready drink** is free. The menu also lets you select a ready alternate; Make then consumes its ingredients. Missing ingredients are listed on the slip and menu. If nothing can be made, use **Study for the next order**; no reward or inventory is lost merely by swapping or returning to study. Each completed focus provides a usable flavor and at least one milk/ice, so recovery always has a playable option.
+
+Old v1 saves receive a safe order default without rewriting their data on open. The pending order is persisted with every successful transition, and Serve rolls over exactly once. Run `node test/orders-browser.cjs` for the two-order browser review; set `CAFE_ARTIFACTS` for screenshots.
