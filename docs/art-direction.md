@@ -70,9 +70,9 @@ The existing goal form can save up to three pending goals, each with a stable ID
 
 The v1 key remains. Missing queue and queueRevision fields default in memory without rewriting old saves. A revision guard rejects edits from a stale queue view, while the existing Web Lock serializes writes across tabs. Demo uses its own queue, ten-second deadlines and temporary receipt book.
 
-## Future direction (not implemented)
+## Direction at the queue checkpoint
 
-A later build may introduce a movable environment, café interior editing, and a catalogue/shop for menu items and furniture earned through drink/food sales. This pass adds no currency, purchases, food system, layout engine, camera controls or furniture placement. Keep stable recipe IDs and explicit successful-order progress available for that later design.
+At the queue checkpoint, camera navigation, interior editing and an earned shop were future direction. The later navigation, decoration and shop releases below implement their first bounded version. Food remains a later extension; there is no avatar or full cooking game.
 
 ## Recipe collection
 
@@ -93,3 +93,11 @@ The owner has now authorized navigation, editable interiors/exteriors and an ear
 Environment data uses stable object IDs, transforms and surface IDs in an additive version-1 layout. It remains separate from renderer objects and game inventory. The pure validator checks room/patio bounds, furniture clearance, wall slots, decal/window overlap and palette choices. Saves carry an expected layout revision so a stale tab cannot overwrite newer edits. One saved layout undo is retained; drafts remain UI-only until Save. Default layouts are supplied to old snapshots in memory without rewriting them on read.
 
 The service counter is a shared Three.js group containing its tray, drink, preparation gesture, ingredient packet and pastry case. The paper anchor and quiet camera target follow it. Original procedural decals, tiles and materials work indoors and outside. Navigation is disabled during edit previews to separate gestures. Test with npm test, npm run build, node test/environment-browser.cjs and node test/environment-sync.cjs against the production preview.
+
+## Earned shop release
+
+Each saved successful serve earns 10 café coins. The economy record stores balance, total earned, owned catalogue IDs and purchase records (unique purchase ID, catalogue ID, canonical price, timestamp). Buy validates funds and ownership under the same Web Lock as orders and saves debit/ownership/recipe unlock together. Repeat clicks, competing tabs and reload cannot pay or charge twice. Old snapshots receive 10 coins per prior served order in memory without a write; the next transition persists that migration. Invalid balances, purchase records and layouts are kept untouched with an error.
+
+The first catalogue has a reading table, patio planter, terracotta tiles and iced shaken latte. Owned furniture has separate stable layout IDs and a placed flag; storing/moving/undoing does not alter ownership or refund coins. Optional new layout items migrate into earlier layouts and undo snapshots without replacing existing edits. Recipe eligibility includes purchase ownership, while original first-serve learning and the two-order milk-cloud milestone remain unchanged. Rendering projects state only; navigation, editor UI and shop UI are separate modules. Recipe serveValue leaves a small extension point for later food without implementing an economy engine.
+
+The explicitly labeled demo shop starter grants 60 practice coins and a small pantry once per demo. It cannot execute in normal play, and a normal save containing demo credit is rejected. Demo earnings, ownership, purchases, decoration and study receipts remain in sessionStorage. Desktop/mobile normal/reduced-motion browser walkthroughs cover earning, buying, placing, recipe use, reload and concurrent debits. Direct Windows/GPU testing is not available in Cloud; the remote develop branch is the review source of truth.

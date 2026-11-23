@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
 import './style.css';
+import { createShopUI } from './shop-ui.js';
 import { createEnvironmentProjection } from './scene-environment.js';
 import { createRoomUI } from './room-ui.js';
 import { createNavigation } from './navigation.js';
@@ -38,12 +39,12 @@ const plasterTexture=new THREE.CanvasTexture(plasterCanvas);plasterTexture.wrapS
 const plaster=mat('#ffffff',{map:plasterTexture});
 // A cropped room, not a floating dollhouse overview.
 box(14,.15,12,mat('#d0bd9f'),0,-.12,0);
-const floor=box(9,.025,6.5,mat('#d0bd9f'),0,0,0);
+const floor=box(9,.025,7.4,mat('#d0bd9f'),0,0,0);
 box(9,5.6,.18,plaster,0,2.75,-3.2);
 box(12,.15,.12,wood,0,.12,-3.05);
 // A quiet walk-around exterior with an open roof/cutaway front.
 const patio=box(2.4,.08,6.5,mat('#c4b59b'),-5.65,-.015,0);
-const facade=mat('#e2d5bd');box(9,5.6,.025,facade,0,2.75,-3.305);box(.025,5.6,6.5,facade,-4.475,2.75,0);
+const facade=mat('#e2d5bd');box(9,5.6,.025,facade,0,2.75,-3.305);box(.025,5.6,6.9,facade,-4.475,2.75,0);
 box(.12,.22,6.7,wood,-6.85,.04,0);
 box(1.1,.13,4.6,mat('#7c8969'),-4.85,4.65,-.25);
 const outsideWindowStart=scene.children.length;
@@ -54,7 +55,7 @@ const outsideWindowParts=scene.children.slice(outsideWindowStart);
 box(1.15,2.8,.07,wood,2.8,1.4,-3.34);box(.87,1.75,.04,mat('#b8cbbb'),2.8,1.8,-3.4);
 box(.06,.17,.07,dark,3.2,1.3,-3.46);
 // Storefront window: softly abstracted street light behind dark slender framing.
-box(.12,5.6,6.5,plaster,-4.4,2.75,0);
+box(.12,5.6,6.9,plaster,-4.4,2.75,0);
 const windowStart=scene.children.length;
 box(.05,3.8,4.2,mat('#dce4d4',{emissive:'#cbd9b9',emissiveIntensity:.22}),-4.31,2.65,-.25);
 for(const z of [-2.35,-.25,1.85]) box(.12,3.9,.075,dark,-4.2,2.65,z,.01);
@@ -204,8 +205,8 @@ window.addEventListener('cafe-state', ({detail})=>{
   if(ingredientPacket.visible)labelPacket(detail.reward);
   const ready=['serve','served'].includes(detail.phase);
   drinkMeshes.forEach(m=>m.visible=ready);
-  drinkBody.material.color.set({coffee:'#b98555',matcha:'#8a9b61',cocoa:'#74503c','milk-cloud':'#e8dcc3'}[detail.drink] || '#b98555');
-  drinkTop.material.color.set({coffee:'#805036',matcha:'#687b3e',cocoa:'#553d2d','milk-cloud':'#fff3df'}[detail.drink] || '#805036');
+  drinkBody.material.color.set({coffee:'#b98555',matcha:'#8a9b61',cocoa:'#74503c','milk-cloud':'#e8dcc3','shaken-latte':'#cbb18b'}[detail.drink] || '#b98555');
+  drinkTop.material.color.set({coffee:'#805036',matcha:'#687b3e',cocoa:'#553d2d','milk-cloud':'#fff3df','shaken-latte':'#e5d5b9'}[detail.drink] || '#805036');
   slipElement.innerHTML=detail.phase==='counter' && detail.reward?`<span>FRESHLY EARNED</span><strong>${detail.reward}</strong>`:ready?'<span>FOR YOUR GUEST</span><strong>made with care.</strong>':'<span>ONE THING</span><strong>at a time.</strong>';
   draw();
 });
@@ -215,5 +216,6 @@ const projection=createEnvironmentProjection({scene,serviceParts:[...counterPart
 function draw(){renderer.render(scene,camera);const projected=projection.anchor().project(camera);slipElement.style.left=`${(projected.x*.5+.5)*canvas.clientWidth}px`;slipElement.style.top=`${(-projected.y*.5+.5)*canvas.clientHeight}px`;}
 const navigation=createNavigation({camera,canvas,draw,quietTarget:projection.target});
 createRoomUI({navigation,preview:environment=>{projection.apply(environment);draw();}});
+createShopUI();
 function resize(){stopServeMotion();stopArrival();stopPreparation();const w=canvas.clientWidth,h=canvas.clientHeight;renderer.setSize(w,h,false);camera.aspect=w/h;navigation.resize();}
 window.addEventListener('resize',resize);resize();
