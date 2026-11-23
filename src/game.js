@@ -1,8 +1,17 @@
 // Pure state transitions: time, randomness and identity are explicit inputs.
 export const INGREDIENTS = ['coffee', 'matcha', 'cocoa'];
-export const RECIPES = INGREDIENTS.map((ingredient, i) => ({ id: ingredient, name: ['Iced latte', 'Iced matcha latte', 'Iced cocoa'][i], needs: { milk: 1, ice: 1, [ingredient]: 1 } }));
-export const fresh = () => ({ version: 1, phase: 'idle', pantry: { milk: 3, ice: 3, coffee: 0, matcha: 0, cocoa: 0 }, recipes: [], receipts: [], session: null, carry: '', reward: null, drink: null, served: 0, order: null, demoReceipts: [] });
-export const canMake = (state, recipe) => Object.entries(recipe.needs).every(([key, count]) => state.pantry[key] >= count);
+export const RECIPES = [
+  ...INGREDIENTS.map((ingredient, i) => ({ id: ingredient, name: ['Iced latte', 'Iced matcha latte', 'Iced cocoa'][i], needs: { milk: 1, ice: 1, [ingredient]: 1 } })),
+  { id:'milk-cloud', name:'Iced milk cloud', needs:{milk:1,ice:1}, unlockOrders:2 }
+];
+export const recipeEligible = (state, recipe) => !!recipe && (!recipe.unlockOrders || state.recipes.includes(recipe.id));
+export function unlockOrderRecipes(state) {
+  const unlocked=RECIPES.filter(r=>r.unlockOrders && state.served>=r.unlockOrders && !state.recipes.includes(r.id)).map(r=>r.id);
+  state.recipes.push(...unlocked);
+  return unlocked;
+}
+export const fresh = () => ({ version: 1, phase: 'idle', pantry: { milk: 3, ice: 3, coffee: 0, matcha: 0, cocoa: 0 }, recipes: [], receipts: [], session: null, carry: '', reward: null, drink: null, served: 0, order: null, demoReceipts: [], queue: [], queueRevision: 0 });
+export const canMake = (state, recipe) => recipeEligible(state,recipe) && Object.entries(recipe.needs).every(([key, count]) => state.pantry[key] >= count);
 // Favor a different feasible drink, then learned recipes; new recipes remain discoverable.
 export function chooseOrder(state, previous = null) {
   const feasible=RECIPES.filter(r=>canMake(state,r));
@@ -20,22 +29,41 @@ export function recipeStatus(state, recipe) {
     const count=Math.max(0,quantity-state.pantry[ingredient]);
     return count ? [{ingredient,count}] : [];
   });
-  return { unlocked:state.recipes.includes(recipe.id), missing,
+  return { unlocked:state.recipes.includes(recipe.id), locked:!recipeEligible(state,recipe), missing,
     ingredientsReady:missing.length===0,
-    available:state.phase==='counter' && missing.length===0 && state.order===recipe.id,
-    swappable:state.phase==='counter' && missing.length===0 && state.order!==recipe.id };
+    available:recipeEligible(state,recipe) && state.phase==='counter' && missing.length===0 && state.order===recipe.id,
+    swappable:recipeEligible(state,recipe) && state.phase==='counter' && missing.length===0 && state.order!==recipe.id };
 }
 export function transition(state, action, { now, id, random = 0, demo = false } = {}) {
   // Reject an order action queued by a tab still showing an earlier guest.
   if(action.expectedServed !== undefined && action.expectedServed !== state.served)return state;
   if(action.expectedSession !== undefined && action.expectedSession !== state.session?.id)return state;
+  if(action.expectedQueueRevision !== undefined && action.expectedQueueRevision !== (state.queueRevision || 0))return state;
   const s = structuredClone(state);
-  if (action.type === 'start' && s.phase === 'idle') {
+  s.queue ||= []; s.queueRevision ||= 0;
+  if(action.type==='queue-add' && s.phase==='idle') {
+    const goal=String(action.goal || '').trim().slice(0,160);
+    const minutes=demo ? 25 : action.minutes;
+    if(!goal || ![25,45].includes(minutes) || !id || s.queue.length>=3 || s.queue.some(q=>q.id===id))return state;
+    s.queue.push({id,goal,minutes});s.queueRevision++;
+    if(s.carry===goal)s.carry='';
+  } else if(action.type==='queue-remove' && s.phase==='idle') {
+    const index=s.queue.findIndex(q=>q.id===action.queueId);
+    if(index<0)return state;
+    s.queue.splice(index,1);s.queueRevision++;
+  } else if ((action.type === 'start' && s.phase === 'idle') || (action.type==='start-next' && ['idle','served'].includes(s.phase))) {
+    if(action.type==='start-next') {
+      const queued=s.queue[0];
+      if(!queued || action.queueId!==queued.id)return state;
+      action={...action,goal:queued.goal,minutes:queued.minutes};
+    }
     const goal = String(action.goal || '').trim().slice(0, 160);
     const duration = demo ? 10_000 : ({25: 25 * 60_000, 45: 45 * 60_000})[action.minutes];
     if (!goal || !duration || !id || !Number.isFinite(now)) return state;
+    if(action.type==='start-next'){s.queue.shift();s.queueRevision++;}
     s.session = { id, goal, started: now, deadline: now + duration, duration };
-    s.carry = ''; s.phase = 'focus'; s.reward = null; s.drink = null;
+    if(s.carry===goal)s.carry='';
+    s.phase = 'focus'; s.reward = null; s.drink = null;
   } else if (action.type === 'tick' && s.phase === 'focus' && now >= s.session.deadline) {
     s.phase = 'review';
   } else if (action.type === 'carry' && ['focus', 'review'].includes(s.phase)) {
@@ -59,8 +87,10 @@ export function transition(state, action, { now, id, random = 0, demo = false } 
     s.drink = recipe.id; s.phase = 'serve';
   } else if (action.type === 'serve' && s.phase === 'serve') {
     s.lastServeUnlocked = !s.recipes.includes(s.drink);
+    s.lastRecipeUnlocks=s.lastServeUnlocked ? [s.drink] : [];
     if (s.lastServeUnlocked) s.recipes.push(s.drink);
     s.served++; s.phase = 'served';
+    s.lastRecipeUnlocks.push(...unlockOrderRecipes(s));
     s.order = chooseOrder(s,s.drink);
   } else if (action.type === 'swap' && s.phase === 'counter') {
     const candidate=action.recipe || alternateOrder(s);

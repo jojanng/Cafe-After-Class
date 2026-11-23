@@ -31,7 +31,7 @@ const path=require('node:path');
   await other.waitForFunction(()=>document.body.dataset.phase==='served');assert.equal(await other.evaluate(()=>window.serveEvents),0);
   await page.reload();assert.equal(await page.evaluate(()=>window.serveEvents),0);assert.equal(await page.locator('.recipe-card').count(),1);
   await page.setViewportSize(mobile?{width:400,height:850}:{width:1400,height:960});assert.equal(await page.evaluate(()=>window.serveEvents),0);
-  const repeat={...ready,recipes:['coffee'],served:1};await page.evaluate(s=>localStorage.setItem('cafe-after-class.progress.v1',JSON.stringify(s)),repeat);await page.reload();await page.getByRole('button',{name:'Serve drink',exact:true}).click();await page.waitForFunction(()=>document.body.dataset.phase==='served');assert.equal(await page.locator('.recipe-card').count(),0);assert.equal(await page.evaluate(()=>window.serveEvents),1);assert.deepEqual(errors,[]);
+  const repeat={...ready,recipes:['coffee','milk-cloud'],served:2};await page.evaluate(s=>localStorage.setItem('cafe-after-class.progress.v1',JSON.stringify(s)),repeat);await page.reload();await page.getByRole('button',{name:'Serve drink',exact:true}).click();await page.waitForFunction(()=>document.body.dataset.phase==='served');assert.equal(await page.locator('.recipe-card').count(),0);assert.equal(await page.evaluate(()=>window.serveEvents),1);assert.deepEqual(errors,[]);
   console.log(name,'passed: rapid clicks, new/repeated recipe, sync, reload, resize');await ctx.close();
  }
  await browser.close();

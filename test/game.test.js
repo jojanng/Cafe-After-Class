@@ -16,7 +16,7 @@ test('failed storage write does not mutate prior progress; invalid saves stay in
 test('saved serve effect occurs only after a successful write; repeat recipe has no unlock', async()=>{
  const {applyWithEffects}=await import('../src/storage.js');const db=memory();let s=finish(start());s=transition(s,{type:'make',recipe:'coffee'});db.setItem(REAL_KEY,JSON.stringify(s));
  const first=applyWithEffects(db,REAL_KEY,{type:'serve'});assert.equal(first.served,true);assert.equal(first.state.lastServeUnlocked,true);assert.equal(applyWithEffects(db,REAL_KEY,{type:'serve'}).served,false);
- s=transition(first.state,{type:'next'});s=finish(start(s));s=transition(s,{type:'make',recipe:'coffee'});db.setItem(REAL_KEY,JSON.stringify(s));const repeat=applyWithEffects(db,REAL_KEY,{type:'serve'});assert.equal(repeat.served,true);assert.equal(repeat.state.lastServeUnlocked,false);assert.deepEqual(repeat.state.recipes,['coffee']);
+ s=transition(first.state,{type:'next'});s=finish(start(s));s=transition(s,{type:'make',recipe:'coffee'});db.setItem(REAL_KEY,JSON.stringify(s));const repeat=applyWithEffects(db,REAL_KEY,{type:'serve'});assert.equal(repeat.served,true);assert.equal(repeat.state.lastServeUnlocked,false);assert.deepEqual(repeat.state.recipes,['coffee','milk-cloud']);
  const broken={getItem:()=>JSON.stringify(s),setItem:()=>{throw Error('full')}};assert.throws(()=>applyWithEffects(broken,REAL_KEY,{type:'serve'}),/full/);
 });
 test('ingredient arrival effect follows a saved completion only',async()=>{

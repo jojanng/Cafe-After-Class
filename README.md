@@ -68,3 +68,13 @@ After either timer ends, a paper receipt waits on the slip. **Collect receipt ·
 **Make** now pours and fills the glass briefly; **Serve** still slides it across the counter. Reduced motion shows final states immediately. Saving is independent of animation and repeated clicks cannot duplicate a study reward, ingredient deduction, receipt, or order.
 
 Run `node test/receipt-preparation-browser.cjs` for the receipt/preparation smoke checks. This review pass follows pushed checkpoint `6db0663e59631c0a7417342f522c7970c4b83cf0`.
+
+## Study queue (playable checkpoint)
+
+Write a goal, choose 25 or 45 minutes, and choose **Save to study queue** to keep it for later. Up to three pending goals are saved locally. **Start next session** starts the first queued goal explicitly, including after Serve. Nothing starts automatically. Expand **View queued goals** to remove an item. Carrying an unfinished goal prefills the existing goal form without a completion reward and leaves the remaining queue intact. Demo queues use 10-second sessions and never change real progress.
+
+## Recipe collection (playable checkpoint)
+
+**Menu** now includes a collection count and **Iced milk cloud**, unlocked after **2 fulfilled customer orders**. It uses one milk and one ice; ordinary recipes keep their first-serve discovery behavior and study ingredients stay random. Prior successful orders count, and old unlocks remain yours. No currency or shop is implemented.
+
+For a quick review, enter the demo, save two goals to the queue, and choose **Start next session**. After each 10-second timer, manually collect its **10 sec** receipt, Make and Serve. After the first Serve, start the next queued session explicitly. After the second Serve, inspect Menu's 2/2 progress and take the next order to make Iced milk cloud. Leave demo to restore unchanged real progress. Run `node test/queue-collection-browser.cjs` for this walkthrough; screenshots go to `CAFE_ARTIFACTS`. The editable environment/interior and earned furniture/menu shop are future roadmap items only.

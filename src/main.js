@@ -180,8 +180,8 @@ window.addEventListener('cafe-state', ({detail})=>{
   if(ingredientPacket.visible)labelPacket(detail.reward);
   const ready=['serve','served'].includes(detail.phase);
   drinkMeshes.forEach(m=>m.visible=ready);
-  drinkBody.material.color.set({coffee:'#b98555',matcha:'#8a9b61',cocoa:'#74503c'}[detail.drink] || '#b98555');
-  drinkTop.material.color.set({coffee:'#805036',matcha:'#687b3e',cocoa:'#553d2d'}[detail.drink] || '#805036');
+  drinkBody.material.color.set({coffee:'#b98555',matcha:'#8a9b61',cocoa:'#74503c','milk-cloud':'#e8dcc3'}[detail.drink] || '#b98555');
+  drinkTop.material.color.set({coffee:'#805036',matcha:'#687b3e',cocoa:'#553d2d','milk-cloud':'#fff3df'}[detail.drink] || '#805036');
   slipElement.innerHTML=detail.phase==='counter' && detail.reward?`<span>FRESHLY EARNED</span><strong>${detail.reward}</strong>`:ready?'<span>FOR YOUR GUEST</span><strong>made with care.</strong>':'<span>ONE THING</span><strong>at a time.</strong>';
   renderer.render(scene,camera);
 });

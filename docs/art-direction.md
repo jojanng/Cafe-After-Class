@@ -63,3 +63,23 @@ At the deadline, the slip displays a paper receipt marked Ready to collect. Noth
 Demo collection uses a separate `demoReceipts` array within demo sessionStorage, visible in the Demo receipt book. Real receipts and real pantry remain unchanged; leaving/reloading demo retains the established isolation behavior. Legacy saves lacking this additive field remain readable. Session-ID guards reject a receipt click queued for a different session. All visual effects follow successful persistence, not timer expiration or generic rendering.
 
 Verify with `npm test`, `npm run build`, and `node test/receipt-preparation-browser.cjs` against the preview. The browser script can test the standalone HTML with `CAFE_HTML` and `CAFE_URL`, networking disabled. It covers the actual 10-second uncollected state, manual collection, book entry, preparation then serving, rapid clicks, desktop/mobile and reduced motion, real-save reload and cross-tab behavior. Windows direct-file/GPU verification is not available in the Cloud browser.
+
+## Study queue
+
+The existing goal form can save up to three pending goals, each with a stable ID and a 25- or 45-minute duration. The active session is separate from those pending goals. The paper queue shows its next goal and a small expandable list with Remove controls. Start next session is available while idle and after a successful Serve; it never runs automatically. Starting atomically removes only the displayed first item and saves its session/deadline. Carry retains the existing unfinished-goal form and receipt behavior without a reward, leaving other queued goals alone.
+
+The v1 key remains. Missing queue and queueRevision fields default in memory without rewriting old saves. A revision guard rejects edits from a stale queue view, while the existing Web Lock serializes writes across tabs. Demo uses its own queue, ten-second deadlines and temporary receipt book.
+
+## Future direction (not implemented)
+
+A later build may introduce a movable environment, café interior editing, and a catalogue/shop for menu items and furniture earned through drink/food sales. This pass adds no currency, purchases, food system, layout engine, camera controls or furniture placement. Keep stable recipe IDs and explicit successful-order progress available for that later design.
+
+## Recipe collection
+
+The fourth stable recipe ID is milk-cloud: Iced milk cloud, cold milk with an airy milk-foam top over ice. It uses one milk and one ice, shown in cream tones in the existing glass. Fulfil two customer orders to unlock it, with visible 0/2, 1/2 and 2/2 progress in the paper menu. Original recipes still become learned on their first serve. Study rewards remain random coffee, matcha or cocoa; the new drink introduces no second chance gate.
+
+Successful Serve increments the existing served total, records the exact newly unlocked recipe IDs, and chooses the next eligible feasible order in one transition/write. Locked milk-cloud never enters rotation or a swap. Completing the second ordinary demo order leaves enough starter milk and ice to make it immediately as the third order. No ingredients are awarded for collection. Old successful orders count toward the threshold: loading adds the earned unlock in memory without rewriting stored data or firing a reveal. Existing recipes, receipts, inventory, queue and active deadline are preserved.
+
+Run npm test, npm run build, and node test/queue-collection-browser.cjs. CAFE_QUEUE_ONLY=1 exercises the queue independently. The full browser script covers two actual ten-second queued sessions and the new drink, desktop/mobile and reduced motion, manual receipt collection, duplicates, old saves, resume, two-tab queue starts and demo isolation. The prior browser smoke and menu-save-sync checks remain useful regressions. This new feature pass follows animation checkpoint 0035be393787196d34bd286166bbe77336bcc5a0 and was verified as a separate playable checkpoint.
+
+Queue editing also preserves an idle form draft when a storage event refreshes the queue. If a concurrent edit makes Save stale, its goal/duration stay in the form with a retry notice. Starting another queued goal retains an unfinished goal for later. Run node test/queue-sync-browser.cjs to force concurrent writes and verify these cases.
