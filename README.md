@@ -78,3 +78,7 @@ Write a goal, choose 25 or 45 minutes, and choose **Save to study queue** to kee
 **Menu** now includes a collection count and **Iced milk cloud**, unlocked after **2 fulfilled customer orders**. It uses one milk and one ice; ordinary recipes keep their first-serve discovery behavior and study ingredients stay random. Prior successful orders count, and old unlocks remain yours. No currency or shop is implemented.
 
 For a quick review, enter the demo, save two goals to the queue, and choose **Start next session**. After each 10-second timer, manually collect its **10 sec** receipt, Make and Serve. After the first Serve, start the next queued session explicitly. After the second Serve, inspect Menu's 2/2 progress and take the next order to make Iced milk cloud. Leave demo to restore unchanged real progress. Run `node test/queue-collection-browser.cjs` for this walkthrough; screenshots go to `CAFE_ARTIFACTS`. The editable environment/interior and earned furniture/menu shop are future roadmap items only.
+
+## Look around
+
+Choose **Look around** to enable canvas navigation. Drag to orbit, right-drag to pan, and wheel to zoom. On touch use one finger to orbit or two fingers to pan/pinch. The paper camera controls and focused-canvas arrow keys, Shift+arrows and +/− offer alternatives. Interior, Exterior and Reset view restore bounded framing. Focus always returns to the quiet interior and disables navigation. Run `node test/navigation-browser.cjs` with the production preview running.

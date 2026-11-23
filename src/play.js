@@ -43,7 +43,7 @@ function render() {
   slip.innerHTML = title + body;
   if (focused) (slip.querySelector('textarea,button') || slip).focus();
   if(notebook.open && currentBook)showBook(currentBook);
-  window.dispatchEvent(new CustomEvent('cafe-state', { detail: { phase: state.phase, drink: state.drink, reward: state.reward } }));
+  window.dispatchEvent(new CustomEvent('cafe-state', { detail: { phase: state.phase, demo, drink: state.drink, reward: state.reward } }));
 }
 function showBook(kind) {
   const content = notebook.querySelector('#book-content');

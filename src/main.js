@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
 import './style.css';
+import { createNavigation } from './navigation.js';
 
 const canvas = document.querySelector('#cafe');
 let renderer;
@@ -36,10 +37,19 @@ const plaster=mat('#ffffff',{map:plasterTexture});
 // A cropped room, not a floating dollhouse overview.
 box(14,.15,12,mat('#d0bd9f'),0,-.12,0);
 for(let z=-4;z<6;z+=.65)box(13,.008,.014,mat('#bba88f'),0,-.038,z,.002).castShadow=false;
-box(20,14,.18,plaster,0,6.4,-3.2);
+box(9,5.6,.18,plaster,0,2.75,-3.2);
 box(12,.15,.12,wood,0,.12,-3.05);
+// A quiet walk-around exterior with an open roof/cutaway front.
+box(2.4,.08,6.5,mat('#c4b59b'),-5.65,-.015,0);
+box(.12,.22,6.7,wood,-6.85,.04,0);
+box(1.1,.13,4.6,mat('#7c8969'),-4.85,4.65,-.25);
+box(.08,1.9,2.0,mat('#b8cbbb'),-4.51,2.6,-.25);
+for(const z of [-1.28,.78])box(.1,2,.06,dark,-4.56,2.6,z);
+for(const y of [1.6,3.6])box(.1,.06,2.12,dark,-4.56,y,-.25);
+box(1.15,2.8,.07,wood,2.8,1.4,-3.34);box(.87,1.75,.04,mat('#b8cbbb'),2.8,1.8,-3.4);
+box(.06,.17,.07,dark,3.2,1.3,-3.46);
 // Storefront window: softly abstracted street light behind dark slender framing.
-box(.12,14,12,plaster,-4.4,6.4,-.15);
+box(.12,5.6,6.5,plaster,-4.4,2.75,0);
 box(.05,3.8,4.2,mat('#dce4d4',{emissive:'#cbd9b9',emissiveIntensity:.22}),-4.31,2.65,-.25);
 for(const z of [-2.35,-.25,1.85]) box(.12,3.9,.075,dark,-4.2,2.65,z,.01);
 for(const y of [.72,4.57])box(.13,.08,4.3,dark,-4.2,y,-.25,.01);
@@ -187,5 +197,7 @@ window.addEventListener('cafe-state', ({detail})=>{
 });
 scene.add(new THREE.HemisphereLight('#fff3da','#88745c',2.1));
 const sun=new THREE.DirectionalLight('#fff0d2',3.2);sun.position.set(-5,8,5);sun.castShadow=true;sun.shadow.mapSize.set(2048,2048);sun.shadow.camera.left=-7;sun.shadow.camera.right=7;sun.shadow.camera.top=7;sun.shadow.camera.bottom=-7;sun.shadow.normalBias=.06;sun.shadow.bias=-.0001;sun.shadow.radius=4;scene.add(sun);
-function resize(){stopServeMotion();stopArrival();stopPreparation();const w=canvas.clientWidth,h=canvas.clientHeight;renderer.setSize(w,h,false);camera.aspect=w/h;const mobile=w<600;camera.fov=mobile?43:36;camera.position.set(mobile?7.8:8.2,mobile?6.2:6.3,mobile?11.8:11.8);camera.lookAt(mobile?.05:0, mobile?2.15:2.0,.25);if(mobile){camera.position.set(8.8,6.9,13.5);camera.setViewOffset(w,h,0,-h*.07,w,h);}else camera.clearViewOffset();camera.updateProjectionMatrix();renderer.render(scene,camera);const projected=slipAnchor.clone().project(camera);slipElement.style.left=`${(projected.x*.5+.5)*w}px`;slipElement.style.top=`${(-projected.y*.5+.5)*h}px`;}
+function draw(){renderer.render(scene,camera);const projected=slipAnchor.clone().project(camera);slipElement.style.left=`${(projected.x*.5+.5)*canvas.clientWidth}px`;slipElement.style.top=`${(-projected.y*.5+.5)*canvas.clientHeight}px`;}
+const navigation=createNavigation({camera,canvas,draw});
+function resize(){stopServeMotion();stopArrival();stopPreparation();const w=canvas.clientWidth,h=canvas.clientHeight;renderer.setSize(w,h,false);camera.aspect=w/h;navigation.resize();}
 window.addEventListener('resize',resize);resize();
