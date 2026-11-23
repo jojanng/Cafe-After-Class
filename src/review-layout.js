@@ -247,7 +247,7 @@ export function positionReviewDrink(target,prep,guest,progress) {
   const travel=Math.min(1,progress);
   target.set(
     THREE.MathUtils.lerp(prep.x,guest.x,progress*progress),
-    THREE.MathUtils.lerp(prep.y,guest.y,travel)+.12*Math.sin(Math.PI*travel),
+    THREE.MathUtils.lerp(prep.y,guest.y,travel)+.17*Math.sin(Math.PI*travel),
     THREE.MathUtils.lerp(prep.z,guest.z,progress*(2-progress))
   );
 }

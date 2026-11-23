@@ -72,6 +72,16 @@ test('the landed packet is supported across its foot and the guest items are sep
     center.addScaledVector(up, .15);
     assert.ok(obstacles.every(obstacle => !obstacle.containsPoint(center)), 'the sliding glass clears the equipment');
   }
+  // Sample the actual pan wall under the glass during the initial lift.
+  const foot = new THREE.Vector3();
+  for (let step = 0; step <= 70; step++) {
+    positionReviewDrink(foot, prep, guestGlass, step / 200);
+    for (let edge = 0; edge < 16; edge++) {
+      const angle = edge * Math.PI / 8;
+      const surface = topAt({x: foot.x + glassRadius * Math.cos(angle), z: foot.z + glassRadius * Math.sin(angle)}, pan.children);
+      assert.ok(!surface || foot.y + 1e-6 >= surface.point.y, 'the glass lifts clear of the pan wall');
+    }
+  }
 });
 
 test('the customer sightline reaches each service spot, and wide views include the return, tree and window', () => {
