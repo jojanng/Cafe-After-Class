@@ -1,19 +1,17 @@
-import {freshEconomy,shopTransition} from './catalog.js';
-import {freshEnvironment,editEnvironment} from './environment.js';
 // Pure state transitions: time, randomness and identity are explicit inputs.
 export const INGREDIENTS = ['coffee', 'matcha', 'cocoa'];
 export const RECIPES = [
   ...INGREDIENTS.map((ingredient, i) => ({ id: ingredient, name: ['Iced latte', 'Iced matcha latte', 'Iced cocoa'][i], needs: { milk: 1, ice: 1, [ingredient]: 1 } })),
   { id:'milk-cloud', name:'Iced milk cloud', needs:{milk:1,ice:1}, unlockOrders:2 },
-  { id:'shaken-latte', name:'Iced shaken latte', needs:{milk:1,ice:1,coffee:1}, shopItem:'recipe-shaken', serveValue:10 }
+  { id:'shaken-latte', name:'Iced shaken latte', needs:{milk:1,ice:1,coffee:1}, legacyOnly:true }
 ];
-export const recipeEligible = (state, recipe) => !!recipe && (!recipe.shopItem || state.economy?.owned.includes(recipe.shopItem)) && (!recipe.unlockOrders || state.recipes.includes(recipe.id));
+export const recipeEligible = (state, recipe) => !!recipe && (!(recipe.legacyOnly || recipe.unlockOrders) || state.recipes.includes(recipe.id));
 export function unlockOrderRecipes(state) {
   const unlocked=RECIPES.filter(r=>r.unlockOrders && state.served>=r.unlockOrders && !state.recipes.includes(r.id)).map(r=>r.id);
   state.recipes.push(...unlocked);
   return unlocked;
 }
-export const fresh = () => ({ version: 1, phase: 'idle', pantry: { milk: 3, ice: 3, coffee: 0, matcha: 0, cocoa: 0 }, recipes: [], receipts: [], session: null, carry: '', reward: null, drink: null, served: 0, order: null, demoReceipts: [], queue: [], queueRevision: 0, environment:freshEnvironment(), environmentUndo:null, economy:freshEconomy() });
+export const fresh = () => ({ version: 1, phase: 'idle', pantry: { milk: 3, ice: 3, coffee: 0, matcha: 0, cocoa: 0 }, recipes: [], receipts: [], session: null, carry: '', reward: null, drink: null, served: 0, order: null, demoReceipts: [], queue: [], queueRevision: 0 });
 export const canMake = (state, recipe) => recipeEligible(state,recipe) && Object.entries(recipe.needs).every(([key, count]) => state.pantry[key] >= count);
 // Favor a different feasible drink, then learned recipes; new recipes remain discoverable.
 export function chooseOrder(state, previous = null) {
@@ -38,8 +36,6 @@ export function recipeStatus(state, recipe) {
     swappable:recipeEligible(state,recipe) && state.phase==='counter' && missing.length===0 && state.order!==recipe.id };
 }
 export function transition(state, action, { now, id, random = 0, demo = false } = {}) {
-  if(['purchase','demo-supplies'].includes(action.type))return shopTransition(state,action,{id,now,demo});
-  if(['layout-save','layout-undo'].includes(action.type))return editEnvironment(state,action);
   // Reject an order action queued by a tab still showing an earlier guest.
   if(action.expectedServed !== undefined && action.expectedServed !== state.served)return state;
   if(action.expectedSession !== undefined && action.expectedSession !== state.session?.id)return state;
@@ -95,9 +91,6 @@ export function transition(state, action, { now, id, random = 0, demo = false } 
     s.lastRecipeUnlocks=s.lastServeUnlocked ? [s.drink] : [];
     if (s.lastServeUnlocked) s.recipes.push(s.drink);
     s.served++; s.phase = 'served';
-    s.economy ||= freshEconomy(s.served-1);
-    s.lastEarning=RECIPES.find(r=>r.id===s.drink)?.serveValue || 10;
-    s.economy.balance+=s.lastEarning;s.economy.earned+=s.lastEarning;
     s.lastRecipeUnlocks.push(...unlockOrderRecipes(s));
     s.order = chooseOrder(s,s.drink);
   } else if (action.type === 'swap' && s.phase === 'counter') {

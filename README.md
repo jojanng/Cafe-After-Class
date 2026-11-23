@@ -75,27 +75,17 @@ Write a goal, choose 25 or 45 minutes, and choose **Save to study queue** to kee
 
 ## Recipe collection (playable checkpoint)
 
-**Menu** now includes a collection count and **Iced milk cloud**, unlocked after **2 fulfilled customer orders**. It uses one milk and one ice; ordinary recipes keep their first-serve discovery behavior and study ingredients stay random. Prior successful orders count, and old unlocks remain yours. The earned shop below adds a separate purchasable recipe without replacing this progression.
+**Menu** now includes a collection count and **Iced milk cloud**, unlocked after **2 fulfilled customer orders**. It uses one milk and one ice; ordinary recipes keep their first-serve discovery behavior and study ingredients stay random. Prior successful orders count, and old unlocks remain yours. A shaken latte unlocked in an older save remains available to that player.
 
-For a quick review, enter the demo, save two goals to the queue, and choose **Start next session**. After each 10-second timer, manually collect its **10 sec** receipt, Make and Serve. After the first Serve, start the next queued session explicitly. After the second Serve, inspect Menu's 2/2 progress and take the next order to make Iced milk cloud. Leave demo to restore unchanged real progress. Run `node test/queue-collection-browser.cjs` for this walkthrough; screenshots go to `CAFE_ARTIFACTS`. Navigation, decoration and the earned shop are now available as described below.
+For a quick review, enter the demo, save two goals to the queue, and choose **Start next session**. After each 10-second timer, manually collect its **10 sec** receipt, Make and Serve. After the first Serve, start the next queued session explicitly. After the second Serve, inspect Menu's 2/2 progress and take the next order to make Iced milk cloud. Leave demo to restore unchanged real progress. Run `node test/queue-collection-browser.cjs` for this walkthrough; screenshots go to `CAFE_ARTIFACTS`.
 
-## Look around
+## Fixed interior and save compatibility
 
-Choose **Look around** to enable canvas navigation. Drag to orbit, right-drag to pan, and wheel to zoom. On touch use one finger to orbit or two fingers to pan/pinch. The paper camera controls and focused-canvas arrow keys, Shift+arrows and +/− offer alternatives. Interior, Exterior and Reset view restore bounded framing. Focus always returns to the quiet interior and disables navigation. Run `node test/navigation-browser.cjs` with the production preview running.
+Study, earn an ingredient, make and serve a drink, then repeat. The interior is fixed and has no editor, exterior, Backstore or Shop. The espresso machine faces staff; the guest receives the drink and paper on the front edge of the counter.
 
-## Decorate
+The same v1 save key preserves study sessions and deadlines, queue, carry-forward, receipts, inventory, fulfilled orders and earned recipes. Earlier room edits and coins are ignored on load and removed from the next successfully saved snapshot. An already unlocked shaken latte stays in Menu. Opening an old save alone never rewrites it.
 
-Choose **Decorate**, select an object, and edit its position/rotation/finish. The service counter carries its tray, glass, pastry case and paper with it. Interior stools and the exterior patio bench move on their respective floors. Interior/exterior windows and wall decals can switch between left/rear walls and move along them. Expand **Floor tiles & wall paint** for independent interior floor, patio, interior wall and exterior wall finishes.
-
-Edits are previews until **Save decoration**. **Cancel changes** restores the saved layout; **Undo last saved edit** restores one earlier layout. Bounds, furniture overlap and window/decal overlap are rejected. Counter rotation is limited to 0°/180° for the work aisle; other furniture uses quarter turns. Wall features retain their size/height. This is a bounded cutaway café, not arbitrary architectural construction. Camera gestures are held while decorating and editing is unavailable during focus. Layouts persist in the same browser save and remain isolated in demo mode.
-
-## Café coins and shop
-
-Each successfully served order earns **10 café coins** exactly once. Earlier fulfilled orders receive the same credit when an old save is loaded. The shop sells a **reading table (20)**, **patio planter (15)**, **terracotta tile finish (10)** and **iced shaken latte recipe (20)**. Purchases are permanent in this browser save, with no real-money system. Bought furnishings appear in Decorate: select one, check **Place this furnishing**, position it, and Save. Uncheck to store it again. Bought tiles appear in the floor/patio finish list. The bought recipe appears in Menu and uses coffee, milk and ice; orders never require it while locked or unavailable.
-
-For a quick isolated review, enter the 10-second demo, complete one goal, collect its receipt, Make and Serve to earn 10 coins. Open Shop and choose **Demo shop starter · 60 coins + pantry** once. Buy all four items, place the furniture and apply tiles in Decorate, then study/collect again to make the purchased recipe from Menu (swap to it if another order is selected). This shortcut exists only in the demo; leaving/reloading demo returns to unchanged real saves.
-
-Validation: `npm test`, `npm run build`, and (with `npm run preview` running) `npm run test:browser`, `node test/navigation-browser.cjs`, `node test/environment-browser.cjs`, `node test/environment-sync.cjs`, and `node test/shop-browser.cjs`. Browser scripts use the installed Chromium path `/usr/bin/chromium` in Cloud; Windows play only needs npm and a WebGL-capable browser, not those Cloud test scripts.
+Run `node test/fixed-cafe-browser.cjs` for repeated demo orders, the fixed camera, old progress and desktop/mobile captures while the production preview is running.
 
 ## Windows / VS Code
 
@@ -108,16 +98,4 @@ npm ci
 npm run dev
 ```
 
-Open the localhost URL printed by Vite on your own Windows computer. For an existing checkout use `git switch develop` then `git pull --ff-only origin develop`, `npm ci`, and `npm run dev`. For a production check use `npm test`, `npm run build`, and `npm run preview`. Dev and preview ports use separate browser saves. No deployment is required.
-
-## Direct placement and Backstore
-
-Open **Backstore** to browse tables, counters, machines, windows, decals, tiles, plants and seating. It lists existing owned pieces as **Stored** or **Placed**; empty categories stay empty. Recipes remain in Menu. Buy furnishings in Shop, then choose **Place** in Backstore. Repositioning uses the same piece, never a duplicate. Tiles are reusable finishes for the whole interior floor or exterior patio.
-
-Choose **Decorate**, or Place/Reposition in Backstore. Click a visible piece in the scene and drag it: floor items snap to a 0.25-unit grid, wall items to a 0.1-unit wall slot. Only the relevant floor/patio or wall grid is shown. A green outline and “Valid” mean it can be confirmed; a red cross and “Invalid” explain blocked bounds/collisions. Release only previews. Use **Rotate piece**, or R while the canvas is focused; **Confirm placement** saves. **Cancel changes** discards the draft and **Undo last saved edit** restores one prior layout. The counter and attached service tray/paper remain functional after moving.
-
-Numeric fields and selects provide a keyboard alternative. Uncheck **Placed** to store a piece again (the working counter cannot be stored). Camera gestures are disabled while editing; use the explicit view buttons or cancel and choose Look around to reframe. Opening Backstore preserves framing. One-finger dragging works on touch; two-finger gestures cancel an active item drag rather than moving it. Focus has no editing overlays. Mobile controls sit below the café; scroll back to the scene to drag.
-
-Additional verification: `node test/placement-browser.cjs` against `npm run preview`. The current catalogue and bounded shell remain intentionally small; there is no free-form wall construction or per-tile painting.
-
-`node test/placement-interruption.cjs` covers lost capture, keyboard rotation and a real purchase/place/store/re-place across reloads. `node test/placement-mobile-layout.cjs` checks mobile control flow and exterior grids. These Cloud scripts require the same production preview and Linux Chromium setup as the earlier browser checks.
+Use the localhost URL printed by Vite. For an existing checkout use `git switch develop`, `git pull --ff-only origin develop`, `npm ci`, and `npm run dev`. Dev and production preview use separate browser saves when their origins differ. No deployment is required.

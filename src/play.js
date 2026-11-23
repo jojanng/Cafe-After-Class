@@ -23,7 +23,7 @@ function studyQueue() {
 }
 function newRecipeCards() {
   const unlocked=state.lastRecipeUnlocks || (state.lastServeUnlocked ? [state.drink] : []);
-  return unlocked.map(id=>{const recipe=RECIPES.find(r=>r.id===id);return `<aside class="recipe-card" aria-label="New recipe"><span>NEW IN YOUR COLLECTION</span><strong>${recipe.name}</strong><small>${Object.entries(recipe.needs).map(([k,n])=>`${n} ${k}`).join(' · ')}</small></aside>`;}).join('');
+  return unlocked.flatMap(id=>{const recipe=RECIPES.find(r=>r.id===id);if(!recipe)return [];return `<aside class="recipe-card" aria-label="New recipe"><span>NEW IN YOUR COLLECTION</span><strong>${recipe.name}</strong><small>${Object.entries(recipe.needs).map(([k,n])=>`${n} ${k}`).join(' · ')}</small></aside>`;}).join('');
 }
 function render() {
   document.body.classList.toggle('focusing', state.phase === 'focus');
@@ -38,20 +38,21 @@ function render() {
   if (state.phase === 'review') body = `<article class="study-receipt"><span>${demo?'PRACTICE RECEIPT':'STUDY RECEIPT'} · READY TO COLLECT</span><h2>${escape(state.session.goal)}</h2><p>${demo?'10 sec':`${state.session.duration/60000} minutes`} of focus</p><em>A little time, well spent.</em></article><p class="hint">Goal finished? Collect your receipt and ingredient. Unfinished work can come with you.</p>${button('complete','Collect receipt · goal complete')}${button('carry','Carry goal forward · no reward')}`;
   if (state.phase === 'counter') body = `${state.reward ? `<p class="ingredient-receipt" role="status">+1 ${escape(state.reward)} · Pantry: ${state.pantry[state.reward]}</p>` : ''}${orderSlip()}`;
   if (state.phase === 'serve') body = `<h2>Ready on the tray.</h2><p>${RECIPES.find(r=>r.id===state.drink).name}</p><p class="hint">One drink for your waiting guest.</p>${button('serve','Serve drink')}`;
-  if (state.phase === 'served') body = `<h2>A small kindness.</h2>${newRecipeCards()}<p>Your guest enjoyed their ${RECIPES.find(r=>r.id===state.drink).name.toLowerCase()}.</p><p class="hint">Earned ${state.lastEarning || 10} café coins · Balance: ${state.economy.balance}</p><p class="hint">Recipe saved in ${demo ? 'the demo' : 'your'} menu.</p>${button('menu','See recipe in menu')}${state.order ? `<p class="hint">Next order ${String(state.served+1).padStart(3,'0')}: ${RECIPES.find(r=>r.id===state.order).name}</p>${button('take-order','Take the next order')}` : '<p class="hint">The pantry needs a refill before another order. Your next focus session will help.</p>'}${studyQueue()}${button('next','Write the next goal')}`;
+  if (state.phase === 'served') body = `<h2>A small kindness.</h2>${newRecipeCards()}<p>Your guest enjoyed their ${RECIPES.find(r=>r.id===state.drink)?.name.toLowerCase() || 'drink'}.</p><p class="hint">Recipe saved in ${demo ? 'the demo' : 'your'} menu.</p>${button('menu','See recipe in menu')}${state.order ? `<p class="hint">Next order ${String(state.served+1).padStart(3,'0')}: ${RECIPES.find(r=>r.id===state.order).name}</p>${button('take-order','Take the next order')}` : '<p class="hint">The pantry needs a refill before another order. Your next focus session will help.</p>'}${studyQueue()}${button('next','Write the next goal')}`;
   const focused = slip.contains(document.activeElement);
   slip.innerHTML = title + body;
   if (focused) (slip.querySelector('textarea,button') || slip).focus();
   if(notebook.open && currentBook)showBook(currentBook);
-  window.dispatchEvent(new CustomEvent('cafe-state', { detail: { phase: state.phase, demo, economy:state.economy, environment:state.environment, environmentUndo:state.environmentUndo, drink: state.drink, reward: state.reward } }));
+  window.dispatchEvent(new CustomEvent('cafe-state', { detail: { phase: state.phase, demo, drink: state.drink, reward: state.reward } }));
 }
 function showBook(kind) {
   const content = notebook.querySelector('#book-content');
   currentBook=kind;
-  if (kind === 'menu') content.innerHTML = `<h2 id="book-title">${demo?'Demo menu':'The little menu'}</h2><p class="collection-count">Recipe collection · ${RECIPES.filter(r=>state.recipes.includes(r.id)).length} / ${RECIPES.length}</p><p>Serve the original drinks to learn them. Fulfil 2 orders to collect Iced milk cloud.</p>${RECIPES.map(r=>{
+  const menuRecipes=RECIPES.filter(r=>!r.legacyOnly || state.recipes.includes(r.id));
+  if (kind === 'menu') content.innerHTML = `<h2 id="book-title">${demo?'Demo menu':'The little menu'}</h2><p class="collection-count">Recipe collection · ${menuRecipes.filter(r=>state.recipes.includes(r.id)).length} / ${menuRecipes.length}</p><p>Serve the original drinks to learn them. Fulfil 2 orders to collect Iced milk cloud.</p>${menuRecipes.map(r=>{
     const status=recipeStatus(state,r);
-    const availability=status.locked ? (r.shopItem?'Available in the shop · purchase to add to Menu':'Locked · fulfil 2 customer orders to collect') : status.missing.length ? `Missing: ${status.missing.map(m=>`${m.count} ${m.ingredient}`).join(', ')}` : status.available ? 'Available to make · current order' : status.swappable ? 'Available as a free order swap' : state.phase==='served' && state.order===r.id ? 'Ready for the next guest · take the order at the slip' : state.phase==='serve' ? 'Ingredients ready · serve the drink on your tray first' : 'Ingredients ready · complete a focus session to make';
-    return `<section class="menu-recipe" data-recipe="${r.id}"><p class="menu-state">${status.unlocked?'Unlocked':status.locked?(r.shopItem?'Available in shop':'Locked · fulfil 2 orders'):'Not yet unlocked · serve once to learn'}</p><h3>${r.name}</h3>${r.unlockOrders ? `<p class="collection-progress">${Math.min(state.served,r.unlockOrders)} / ${r.unlockOrders} fulfilled orders${status.unlocked?' · collected':''}</p><progress aria-label="Iced milk cloud unlock progress" value="${Math.min(state.served,r.unlockOrders)}" max="${r.unlockOrders}"></progress>` : ''}<p class="menu-description">${{coffee:'Roasted coffee, soft milk, clear ice.',matcha:'Green tea, soft milk, clear ice.',cocoa:'Rich cocoa, soft milk, clear ice.','milk-cloud':'Cold milk, airy milk foam, clear ice.','shaken-latte':'Coffee and milk shaken into a pale, airy layer.'}[r.id]}</p><p class="menu-needs">${Object.entries(r.needs).map(([k,n])=>`${n} ${k} (${state.pantry[k]} in pantry)`).join(' · ')}</p><p class="menu-availability">${availability}</p>${status.swappable ? button('swap',`Swap order to ${r.name.toLowerCase()}`,`data-recipe="${r.id}"`) : button('make',`Make ${r.name.toLowerCase()}`,`data-recipe="${r.id}" ${status.available?'':'disabled'}`)}</section>`;
+    const availability=status.locked ? 'Locked · fulfil 2 customer orders to collect' : status.missing.length ? `Missing: ${status.missing.map(m=>`${m.count} ${m.ingredient}`).join(', ')}` : status.available ? 'Available to make · current order' : status.swappable ? 'Available as a free order swap' : state.phase==='served' && state.order===r.id ? 'Ready for the next guest · take the order at the slip' : state.phase==='serve' ? 'Ingredients ready · serve the drink on your tray first' : 'Ingredients ready · complete a focus session to make';
+    return `<section class="menu-recipe" data-recipe="${r.id}"><p class="menu-state">${status.unlocked?'Unlocked':status.locked?'Locked · fulfil 2 orders':'Not yet unlocked · serve once to learn'}</p><h3>${r.name}</h3>${r.unlockOrders ? `<p class="collection-progress">${Math.min(state.served,r.unlockOrders)} / ${r.unlockOrders} fulfilled orders${status.unlocked?' · collected':''}</p><progress aria-label="Iced milk cloud unlock progress" value="${Math.min(state.served,r.unlockOrders)}" max="${r.unlockOrders}"></progress>` : ''}<p class="menu-description">${{coffee:'Roasted coffee, soft milk, clear ice.',matcha:'Green tea, soft milk, clear ice.',cocoa:'Rich cocoa, soft milk, clear ice.','milk-cloud':'Cold milk, airy milk foam, clear ice.','shaken-latte':'Coffee and milk shaken into a pale, airy layer.'}[r.id]}</p><p class="menu-needs">${Object.entries(r.needs).map(([k,n])=>`${n} ${k} (${state.pantry[k]} in pantry)`).join(' · ')}</p><p class="menu-availability">${availability}</p>${status.swappable ? button('swap',`Swap order to ${r.name.toLowerCase()}`,`data-recipe="${r.id}"`) : button('make',`Make ${r.name.toLowerCase()}`,`data-recipe="${r.id}" ${status.available?'':'disabled'}`)}</section>`;
   }).join('')}`;
   if (kind === 'pantry') content.innerHTML = `<h2 id="book-title">${demo?'Demo pantry':'In the pantry'}</h2><ul>${Object.entries(state.pantry).map(([k,v])=>`<li>${k}<strong>${v}</strong></li>`).join('')}</ul><p>Each focus reward is coffee, matcha, or cocoa. Milk and ice are topped up to at least one after focus.</p>`;
   if (kind === 'receipts') {
@@ -100,7 +101,7 @@ async function act(action) {
       window.dispatchEvent(new CustomEvent('cafe-ingredient-saved'));
     }
     if (served) {
-      notice.textContent = `Drink served · +${state.lastEarning} café coins.${state.lastRecipeUnlocks?.length?' New recipe in your menu.':''}`;
+      notice.textContent = `Drink served.${state.lastRecipeUnlocks?.length?' New recipe in your menu.':''}`;
       window.dispatchEvent(new CustomEvent('cafe-serve-saved'));
       if (!matchMedia('(prefers-reduced-motion: reduce)').matches) for(const card of slip.querySelectorAll('.recipe-card')) {
         card.animate([{opacity:0,transform:'translateY(10px)'},{opacity:1,transform:'translateY(0)'}], {duration:220,delay:480,easing:'ease-out',fill:'backwards'});
@@ -148,5 +149,3 @@ window.addEventListener('storage', event => {
 document.addEventListener('visibilitychange', checkTime);
 try { state=read(localStorage,REAL_KEY); render();checkTime(); } catch(error) { notice.textContent=error.message; }
 setInterval(checkTime, 1000);
-
-window.addEventListener('cafe-command',async event=>{event.detail.done(await act(event.detail.action));});

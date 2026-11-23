@@ -2,10 +2,11 @@ import * as THREE from 'three';
 import {RoundedBoxGeometry} from 'three/addons/geometries/RoundedBoxGeometry.js';
 import {mergeGeometries} from 'three/addons/utils/BufferGeometryUtils.js';
 import {oakGrain, paintedMap, stillLife} from './corner-materials.js';
+import { MACHINE_POSITION, MACHINE_YAW } from './fixed-room.js';
 
 const finish = (color, roughness=.72, metalness=0) => new THREE.MeshStandardMaterial({color, roughness, metalness});
 
-// Batch fixed sub-parts by material within each movable object, never across layout IDs.
+// Batch fixed sub-parts by material within each prop.
 function workshop() {
   const parts = [];
   function mesh(geometry, material, x, y, z) {
@@ -64,7 +65,7 @@ function curvedSlab(width,depth,height,radius,bevel=.025,rimWidth=0) {
   return geo;
 }
 
-// Light trapped at a surface contact. The feather belongs to the object and never takes a placement hit.
+// Light trapped at a surface contact. The feather belongs to the object and stays under its footprint.
 function contactMaterial() {
   const map = paintedMap(256, 128, (ctx) => {
     ctx.filter = 'blur(7px)';
@@ -133,13 +134,15 @@ export function createServiceCorner(scene, metalReflections) {
   machine.box(1.95,.105,.85,satin,0,.159,.005,.04);
   machine.box(1.78,.66,.32,charcoal,0,.50,-.235,.08);
   machine.box(1.65,.48,.035,metalLight,0,.49,-.051);
+  // Plain brushed backplate: this is the face the guest actually sees.
+  machine.box(1.57,.43,.024,satin,0,.54,-.400,.022);
   for(const x of [-.91,.91]){
     machine.box(.145,.82,.76,jade,x,.59,-.025,.069);
     machine.box(.154,.31,.735,copper,x,.86,-.008,.074);
   }
   // Recessed vents under the rounded end cap pick up a slim highlight at the inspection angle.
-  for (const z of [-.17, -.09, -.01, .07, .15]) {
-    machine.box(.007,.19,.025,rubber,.985,.535,z,.003);
+  for (const side of [-1, 1]) for (const z of [-.17, -.09, -.01, .07, .15]) {
+    machine.box(.007,.19,.025,rubber,side*.985,.535,z,.003);
   }
   machine.box(1.86,.29,.76,satin,0,.88,-.008,.09);
   machine.box(1.62,.11,.035,charcoal,0,.883,.374,.026);
@@ -172,9 +175,10 @@ export function createServiceCorner(scene, metalReflections) {
   cup(machine,-.57,1.025,-.08,porcelain,.91);cup(machine,-.26,1.025,-.09,jade,.85);
   machine.cylinder(.165,.142,.024,porcelain,.45,1.036,-.015);
   cup(machine,.45,1.049,-.015,clay,.94);
-  // Leave the pickup visible from both legal counter orientations.
-  const espresso=machine.batch();espresso.position.set(-1.61,1.958,1.07);
-  espresso.scale.setScalar(.96);espresso.rotation.y=.07;
+  // Model-local +Z is the controls and brew bay. Staff stand at world −Z.
+  // Turn only the machine; the counter and guest pickup still face world +Z.
+  const espresso=machine.batch();espresso.position.set(...MACHINE_POSITION);
+  espresso.scale.setScalar(.96);espresso.rotation.y=MACHINE_YAW;
   const service=bar.batch();service.add(espresso);scene.add(service);
   contact(service,contactShade,6.34,2.70,.2,.020,.65);
   contact(service,contactShade,2.15,1.12,espresso.position.x,1.962,espresso.position.z);
@@ -213,23 +217,9 @@ export function createServiceCorner(scene, metalReflections) {
   shelf.mesh(new THREE.LatheGeometry(carafe.map(([r,h])=>new THREE.Vector2(r,h)),24),clay,.62,2.38,-2.87);
   const rack=shelf.batch();scene.add(rack);
 
-  const prints=[];
   for(const [x,subject] of [[-.68,'fruit'],[.37,'cup']]){
     const frame=workshop();frame.box(.96,1.27,.044,walnut,0,0,0,.016);
     frame.mesh(new THREE.PlaneGeometry(.885,1.19),stillLife(subject),0,0,.023);
-    const group=frame.batch();group.position.set(x,3.47,-3.085);scene.add(group);prints.push(group);
+    const group=frame.batch();group.position.set(x,3.47,-3.085);scene.add(group);
   }
-  return {service,oak,setBackdrop(layout){
-    const sash=layout.items['window-inside'];
-    const hasRearWindow=sash.placed!==false && sash.slot==='rear';
-    backbar.visible=!hasRearWindow || Math.abs(sash.offset-.2)>4.56;
-    rack.visible=!hasRearWindow || Math.abs(sash.offset)>3.29;
-    // Slide-in window and decal slots take precedence over these removable wall prints.
-    for(const print of prints){
-      print.visible=!['window-inside','decal-inside'].some(id=>{
-        const item=layout.items[id],halfWidth=id==='window-inside'?2.18:.44;
-        return item.placed!==false && item.slot==='rear' && Math.abs(item.offset-print.position.x)<halfWidth+.5;
-      });
-    }
-  }};
 }

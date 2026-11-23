@@ -1,5 +1,3 @@
-import {freshEconomy,validateEconomy} from './catalog.js';
-import {freshEnvironment,validateEnvironment,migrateEnvironment} from './environment.js';
 import { fresh, transition, chooseOrder, RECIPES, unlockOrderRecipes } from './game.js';
 export const REAL_KEY = 'cafe-after-class.progress.v1';
 export const DEMO_KEY = 'cafe-after-class.demo.v1';
@@ -14,9 +12,15 @@ export function read(storage, key) {
     throw new Error('Saved progress could not be read. It has been kept untouched.');
   }
   if(!Number.isInteger(s.served) || s.served<0)throw new Error('Saved order progress could not be read. It has been kept untouched.');
-  s.economy ??= freshEconomy(s.served);validateEconomy(s.economy,key===DEMO_KEY);
-  s.environment=migrateEnvironment(s.environment);s.environmentUndo ??= null;validateEnvironment(s.environment,s.economy.owned);
-  if(s.environmentUndo){s.environmentUndo=migrateEnvironment(s.environmentUndo);validateEnvironment(s.environmentUndo,s.economy.owned);}
+  // Retired room/economy data cannot block or change the fixed café. An old purchase
+  // is relevant only as evidence of the player's already unlocked drink.
+  if(!s.recipes.includes('shaken-latte') && Array.isArray(s.economy?.owned) && s.economy.owned.includes('recipe-shaken')) {
+    s.recipes.push('shaken-latte');
+  }
+  delete s.environment;
+  delete s.environmentUndo;
+  delete s.economy;
+  delete s.lastEarning;
   unlockOrderRecipes(s);
   s.queue ??= []; s.queueRevision ??= 0;
   if(!Array.isArray(s.queue) || s.queue.length>3 || !Number.isInteger(s.queueRevision) || s.queueRevision<0 ||
@@ -26,6 +30,8 @@ export function read(storage, key) {
   // Additive v1 default: never rewrite a legacy save just by opening it.
   if(!Object.hasOwn(s,'order')) s.order=s.phase==='serve' ? s.drink : ['counter','served'].includes(s.phase) ? chooseOrder(s,s.drink) : null;
   if(s.order!==null && !RECIPES.some(r=>r.id===s.order))throw new Error('Saved order could not be read. It has been kept untouched.');
+  if(s.phase==='serve' && !RECIPES.some(r=>r.id===s.drink))throw new Error('Saved drink could not be read. It has been kept untouched.');
+  if(s.order==='shaken-latte' && !s.recipes.includes('shaken-latte') && s.phase!=='serve')s.order=chooseOrder(s,s.drink);
   return s;
 }
 export function applyWithEffects(storage, key, action, context) {
