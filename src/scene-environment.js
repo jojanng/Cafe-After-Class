@@ -1,15 +1,19 @@
 import {SERVICE_ANCHORS} from './placement-model.js';
 import * as THREE from 'three';
 import {PAINTS} from './environment.js';
-export function createEnvironmentProjection({scene,serviceParts,drinkOrigins,stools,windows,counterParts,wood,edge,floor,patio,wall,facade}){
+export function createEnvironmentProjection({scene,serviceParts,drinkOrigins,stools,windows,corner,wood,edge,dark,floor,oakBoards,patio,wall,facade}){
  const material=color=>new THREE.MeshStandardMaterial({color,roughness:.85});
  const group=(objects,position)=>{const g=new THREE.Group();scene.add(g);g.position.copy(position);scene.updateMatrixWorld(true);for(const obj of objects)g.attach(obj);return g;};
  const service=group(serviceParts,new THREE.Vector3(.2,0,.65));drinkOrigins.forEach(p=>p.sub(new THREE.Vector3(.2,0,.65)));
  const groups={counter:service};const paints={};
  function finish(id,objects){paints[id]=objects.filter(m=>m.material===wood||m.material===edge);paints[id].forEach(m=>m.material=m.material.clone());}
- finish('counter',counterParts);
+
  for(let i=0;i<stools.length;i++){const id=i?'stool-b':'stool-a';groups[id]=group(stools[i],new THREE.Vector3(-3.55,0,i?.75:-1.25));finish(id,stools[i]);}
- for(const [i,id] of ['window-inside','window-outside'].entries()){groups[id]=group(windows[i],new THREE.Vector3(i?-4.56:-4.2,0,-.25));paints[id]=windows[i].filter(m=>m.geometry.parameters.height<.15 || m.geometry.parameters.depth<.1);paints[id].forEach(m=>m.material=m.material.clone());}
+ for(const [i,id] of ['window-inside','window-outside'].entries()){
+   groups[id]=group(windows[i],new THREE.Vector3(i?-4.56:-4.2,0,-.25));
+   paints[id]=windows[i].filter(part=>part.material===dark || part.material===edge);
+   paints[id].forEach(part=>part.material=part.material.clone());
+ }
  const bench=new THREE.Group();scene.add(bench);groups.bench=bench;paints.bench=[];
  function block(g,w,h,d,x,y,z,color){const m=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),material(color));m.position.set(x,y,z);m.castShadow=m.receiveShadow=true;g.add(m);return m;}
  paints.bench.push(block(bench,1.45,.12,.65,0,.6,0,'#8b9877'),block(bench,1.45,.5,.09,0,.94,-.28,'#8b9877'));
@@ -29,6 +33,8 @@ export function createEnvironmentProjection({scene,serviceParts,drinkOrigins,sto
     else {g.position.set(item.x,0,item.z);g.rotation.y=THREE.MathUtils.degToRad(item.rotation);}
     paints[id]?.forEach(m=>m.material.color.set(PAINTS[item.color]));
    }
+   corner.oak.color.set(PAINTS[env.items.counter.color]);corner.setBackdrop(env);
+   oakBoards.visible=env.surfaces.floor==='oak';floor.visible=!oakBoards.visible;
    floor.material.map=texture(env.surfaces.floor);floor.material.color.set('#ffffff');floor.material.needsUpdate=true;
    patio.material.map=texture(env.surfaces.patio);patio.material.color.set('#ffffff');patio.material.needsUpdate=true;
    wall.color.set(PAINTS[env.surfaces.wall]);facade.color.set(PAINTS[env.surfaces.facade]);
