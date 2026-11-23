@@ -15,12 +15,12 @@ export function paintedMap(width, height, paint) {
   return map;
 }
 
-export function oakGrain() {
+export function oakGrain(contrast=1) {
   return paintedMap(512, 128, (ctx, width, height) => {
     ctx.fillStyle = '#fff7e9';
     ctx.fillRect(0, 0, width, height);
     for (let y = 0; y < height; y += 1.68 + .67 * Math.cos(y)) {
-      ctx.strokeStyle = `rgba(86,52,31,${.032 + .115 * Math.cos(y * .46) ** 4})`;
+      ctx.strokeStyle = `rgba(86,52,31,${contrast * (.032 + .115 * Math.cos(y * .46) ** 4)})`;
       ctx.lineWidth = .7 + .9 * Math.sin(y * 7) ** 2;
       ctx.beginPath();
       for (let x = 0; x <= width; x += 4) {
@@ -54,28 +54,62 @@ export function oakVeneer() {
   return map;
 }
 
-// Frosted view of a neighboring roof and a break in the trees. The sash owns the view.
+// An original courtyard beyond the recessed glass, painted once in layers of morning haze.
 export function windowGlass() {
-  const map = paintedMap(512, 448, (ctx, w, h) => {
+  const map = paintedMap(1240, 512, (ctx, w, h) => {
     const sky = ctx.createLinearGradient(0, 0, w / 2, h);
-    sky.addColorStop(0, '#94afb2'); sky.addColorStop(.7, '#e1ddc9'); sky.addColorStop(1, '#ede3c9');
+    sky.addColorStop(0, '#A5BCBF'); sky.addColorStop(.61, '#E8E6D6'); sky.addColorStop(1, '#E1D0AC');
     ctx.fillStyle = sky; ctx.fillRect(0, 0, w, h);
-    ctx.filter = 'blur(3px)';
-    ctx.fillStyle = '#b6b9a8'; ctx.fillRect(-10, 245, 180, 210);
-    ctx.fillStyle = '#b5a595'; ctx.fillRect(140, 280, 385, 175);
-    ctx.fillStyle = '#97978f'; ctx.fillRect(128, 270, 400, 14);
-    ctx.fillStyle = '#84908c';
-    for (const x of [173, 231, 345, 402]) {
-      ctx.fillRect(x, 302, 24, 35);
-      ctx.fillRect(x, 365, 24, 35);
+
+    // Muted building planes and narrow eaves stay behind the branches.
+    function facade(x, y, width, wall, roof) {
+      ctx.fillStyle=wall; ctx.fillRect(x,y,width,h-y);
+      ctx.fillStyle=roof; ctx.fillRect(x-3,y-4,width+6,6);
+      ctx.fillStyle='#E6DCC7'; ctx.fillRect(x-2,y-5,width+4,2);
+      for(let bay=x+15; bay<x+width-21; bay+=39) {
+        for(let row=y+20; row<h; row+=52) {
+          ctx.fillStyle='#9FA9A2'; ctx.fillRect(bay,row,18,27);
+          ctx.fillStyle=wall; ctx.fillRect(bay+8,row,2,27);
+          ctx.fillStyle='#DED4BB'; ctx.fillRect(bay-2,row+27,22,3);
+        }
+      }
     }
-    for (const [x,y,r] of [[0,235,59],[70,254,49],[10,290,68],[468,173,93],[411,200,59],[515,243,74]]) {
-      ctx.fillStyle = '#8eaa91'; ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2); ctx.fill();
+    ctx.translate(w-640,0);
+    facade(-615,313,236,'#C9C0AC','#A6A499');
+    facade(-379,333,191,'#D5C7B1','#B1AA99');
+    facade(-188,300,178,'#C7C5B4','#A2A896');
+    facade(-10,318,220,'#CACAB7','#ABAE9C');
+    facade(190,341,185,'#D4BEA8','#AFA79B');
+    facade(375,306,276,'#D6C9B4','#A6A49A');
+
+    let seed=174;
+    const random=()=>((seed=seed*16807%2147483647)/2147483647);
+    function leaves(cx,cy,rx,ry,tones) {
+      for(let i=0; i<190; i++) {
+        const angle=random()*Math.PI*2, radius=Math.sqrt(random());
+        const x=cx+Math.cos(angle)*radius*rx, y=cy+Math.sin(angle)*radius*ry;
+        const size=4+random()*12;
+        ctx.fillStyle=tones[i%tones.length];
+        ctx.beginPath(); ctx.ellipse(x,y,size,size*.61,-.38,0,Math.PI*2); ctx.fill();
+      }
     }
-    ctx.filter = 'none'; ctx.fillStyle = '#f3eee92a'; ctx.fillRect(0, 0, w, h);
-    ctx.fillStyle = '#ffffff16'; ctx.beginPath(); ctx.moveTo(310,0);ctx.lineTo(355,0);ctx.lineTo(150,h);ctx.lineTo(105,h);ctx.fill();
+    ctx.strokeStyle='#8C8E7D'; ctx.lineCap='round';
+    for(const [x,base,tipX,tipY,thickness] of [[-340,h,-362,245,10],[-345,364,-422,265,6],[52,h,47,285,8],[49,400,8,318,4],[48,363,95,294,4],[595,h,578,233,10],[583,316,513,243,5],[580,290,628,211,4]]) {
+      ctx.lineWidth=thickness; ctx.beginPath(); ctx.moveTo(x,base); ctx.quadraticCurveTo(x,(base+tipY)/2,tipX,tipY); ctx.stroke();
+    }
+    const olive=['#92A38B','#AAB6A0','#ABB79F','#BDC2A2'];
+    const sunlit=['#ACBBA2','#B9C3A6','#C8C9A4','#CAD0AF'];
+    leaves(21,284,88,59,olive); leaves(67,267,66,39,sunlit);
+    leaves(590,226,108,77,olive); leaves(530,221,70,46,sunlit); leaves(605,168,82,41,sunlit);
+    leaves(-350,249,108,71,olive); leaves(-415,229,76,43,sunlit); leaves(-319,205,80,41,sunlit);
+    // Soften the completed painting in one pass before it goes behind the sash.
+    const courtyard=document.createElement('canvas');
+    courtyard.width=w; courtyard.height=h;
+    courtyard.getContext('2d').drawImage(ctx.canvas,0,0);
+    ctx.resetTransform();
+    ctx.filter='blur(1.9px)'; ctx.drawImage(courtyard,0,0); ctx.filter='none';
   });
-  return new THREE.MeshBasicMaterial({map, color:'#e0e0d5', toneMapped:false});
+  return new THREE.MeshBasicMaterial({map, color:'#F6F4EE', toneMapped:false});
 }
 
 // Two small, original cut-paper still lifes. Large color fields read from the study camera.

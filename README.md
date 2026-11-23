@@ -27,13 +27,13 @@ Open http://localhost:4173. Dev and preview ports have separate browser storage.
 3. The earned ingredient arrives as a labeled packet on the tray. Open the paper menu to see unlocked recipes, available drinks, and missing ingredients. Make an available drink with one flavor, one milk, and one ice. The starter pantry has three milk and three ice. Each completed focus session restocks those basics to at least one.
 4. Serve the drink to the single guest. Open Menu to see the recipe you learned. Write another goal to continue.
 
-For a quick review choose **Try 10-second demo**, write a practice goal, wait 10 seconds, confirm, make, serve, and see the menu. **Leave demo** restores real progress unchanged. Demo entry starts a fresh temporary pantry, never writes real receipts, and never unlocks real recipes. Reload exits demo. On narrow phones scroll down from the café to the paper and book buttons.
+For a quick review choose **Try 10-second demo**, write a practice goal, wait 10 seconds, confirm, make, serve, and see the menu. **Leave demo** restores real progress unchanged. Demo entry starts a fresh temporary pantry, never writes real receipts, and never unlocks real recipes. Reload exits demo. Menu, Pantry and Receipts are in the header. The current task appears below the counter on desktop and phone.
 
 ## Architecture and persistence
 
 - `src/game.js`: pure state transitions with injected time, random value, and session identity. Guards prevent re-awarding, double consumption, and duplicate serves/unlocks.
 - `src/storage.js`: versioned snapshot reads and synchronous saves. Each transition atomically persists pantry, session, receipts, and recipes together. Invalid saves are preserved, with a visible error.
-- `src/play.js`: accessible HTML controls, timer, dialogs, and orchestration. Web Locks serialize mutations across tabs, re-reading the latest snapshot before each write; storage events synchronize other real-game tabs. Rendering never awards progress.
+- `src/play.js` runs the HTML controls, timer and dialogs. Each tab reads the save under a Web Lock. A same-origin document observes the real save's storage event before the writer releases the lock. Other tabs then refresh their controls and preserve any draft being edited.
 - `src/main.js`: original Three.js café, responding to state events for tray/drink appearance.
 
 Real state uses localStorage (`cafe-after-class.progress.v1`); demo uses a separate sessionStorage key. A session records an absolute deadline. Expiration opens a completion check, not an automatic goal-completion reward. No network, login, or server clock is involved. The client trusts the device clock and the player's confirmation. Clearing browser data removes progress; private browsing may not retain it. Storage failures are surfaced without showing an unsaved award. WebGL and a modern browser supporting Web Locks on localhost/HTTPS are required.
@@ -71,7 +71,7 @@ Run `node test/receipt-preparation-browser.cjs` for the receipt/preparation smok
 
 ## Study queue (playable checkpoint)
 
-Write a goal, choose 25 or 45 minutes, and choose **Save to study queue** to keep it for later. Up to three pending goals are saved locally. **Start next session** starts the first queued goal explicitly, including after Serve. Nothing starts automatically. Expand **View queued goals** to remove an item. Carrying an unfinished goal prefills the existing goal form without a completion reward and leaves the remaining queue intact. Demo queues use 10-second sessions and never change real progress.
+Write a goal, choose 25 or 45 minutes, and choose **Save to study queue** to keep it for later. Up to three pending goals are saved locally. **Start next session** starts the first queued goal explicitly, including after Serve. Nothing starts automatically. Expand **Study queue** on the goal form to remove an item. Carrying an unfinished goal prefills the existing goal form without a completion reward and leaves the remaining queue intact. Demo queues use 10-second sessions and never change real progress.
 
 ## Recipe collection (playable checkpoint)
 
@@ -86,6 +86,8 @@ Study, earn an ingredient, make and serve a drink, then repeat. The interior is 
 The same v1 save key preserves study sessions and deadlines, queue, carry-forward, receipts, inventory, fulfilled orders and earned recipes. Earlier room edits and coins are ignored on load and removed from the next successfully saved snapshot. An already unlocked shaken latte stays in Menu. Opening an old save alone never rewrites it.
 
 Run `node test/fixed-cafe-browser.cjs` for repeated demo orders, the fixed camera, old progress and desktop/mobile captures while the production preview is running.
+
+Run `node test/cafe-layout-browser.cjs` against the same preview to check all six phases at five viewport sizes, exposed canvas background, keyboard access to the books and page scrolling at larger text sizes.
 
 ## Windows / VS Code
 

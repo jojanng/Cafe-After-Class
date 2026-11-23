@@ -3,9 +3,8 @@ import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.j
 import {RoomEnvironment} from 'three/addons/environments/RoomEnvironment.js';
 import {createServiceCorner} from './service-corner.js';
 import {createIngredientReward} from './service-counter.js';
-import {createOakBoards,paperPendant} from './corner-shell.js';
-import {windowGlass} from './corner-materials.js';
-import {GUEST_GLASS, GUEST_RECEIPT, frameFixedCamera} from './fixed-room.js';
+import {createCafeShell,paperPendant} from './corner-shell.js';
+import {GUEST_GLASS, GUEST_RECEIPT, PASTRY_CASE, WORKTOP_Y, frameFixedCamera} from './fixed-room.js';
 import './style.css';
 
 const canvas = document.querySelector('#cafe');
@@ -25,59 +24,27 @@ const reflections = new THREE.PMREMGenerator(renderer);
 const metalReflections = reflections.fromScene(studio, 0, .1, 100, {size: 32}).texture;
 studio.dispose();
 reflections.dispose();
-scene.fog = new THREE.Fog('#e9dfcf', 18, 36);
+
 const camera = new THREE.PerspectiveCamera(36, 1, .1, 60);
 const mat = (color, extra = {}) => new THREE.MeshStandardMaterial({ color, roughness: .8, ...extra });
-const wood = mat('#b58045');
-const edge = mat('#d0a064');
-const dark = mat('#383a32');
 const ceramic = mat('#eee6d6');
 const mesh = (geo, material, x, y, z, parent=scene) => {
   const m = new THREE.Mesh(geo, material); m.position.set(x,y,z); m.castShadow = true; m.receiveShadow = true; parent.add(m); return m;
 };
-const box = (w,h,d,m,x,y,z,r=.04) => mesh(new RoundedBoxGeometry(w,h,d,2,r),m,x,y,z);
-const cyl = (rt,rb,h,m,x,y,z,n=32) => mesh(new THREE.CylinderGeometry(rt,rb,h,n),m,x,y,z);
-const ring = (r,t,m,x,y,z) => { const o=mesh(new THREE.TorusGeometry(r,t,8,40),m,x,y,z);o.rotation.x=Math.PI/2;return o; };
-// Subtle original procedural plaster: no downloaded textures or assets.
-const plasterCanvas=document.createElement('canvas'); plasterCanvas.width=plasterCanvas.height=128;
-const ctx=plasterCanvas.getContext('2d');ctx.fillStyle='#fbf9f5';ctx.fillRect(0,0,128,128);
-let seed=17;for(let i=0;i<5000;i++){seed=(seed*16807)%2147483647;const x=seed%128;seed=(seed*16807)%2147483647;ctx.fillStyle=i%2?'#f4f0eb':'#fffdfa';ctx.fillRect(x,seed%128,1,1);}
-const plasterTexture=new THREE.CanvasTexture(plasterCanvas);plasterTexture.wrapS=plasterTexture.wrapT=THREE.RepeatWrapping;plasterTexture.repeat.set(5,3);plasterTexture.colorSpace=THREE.SRGBColorSpace;
-const plaster=mat('#ffffff',{map:plasterTexture});
-// A cropped room, not a floating dollhouse overview.
-const baseMaterial=mat('#af9c88');
-box(9.03,.30,7.43,baseMaterial,0,-.20,0,.055);
-box(9,.025,7.4,mat('#d0bd9f'),0,0,0);
-createOakBoards(scene);
-box(9,5.6,.18,plaster,0,2.75,-3.2);
-box(9,.10,.065,wood,0,.064,-3.078,.015);
-// Narrow end caps finish the fixed interior.
-box(9.02,.10,.24,plaster,0,5.53,-3.20,.025);
-box(.22,.10,6.90,plaster,-4.40,5.53,0,.025);
-// Storefront window: softly abstracted street light behind dark slender framing.
-box(.12,5.6,6.9,plaster,-4.4,2.75,0);
-// Recess the glazing inside the fixed left-wall frame.
-const pane=mesh(new THREE.PlaneGeometry(4.2,3.8),windowGlass(),-4.245,2.65,-.25);
-pane.rotation.y=Math.PI/2;
-box(.105,.092,4.25,dark,-4.2,3.84,-.25,.016);
-for(const z of [-2.35,-.25,1.85]) box(.14,3.9,.11,dark,-4.2,2.65,z,.01);
-for(const y of [.72,4.57])box(.15,.11,4.3,dark,-4.2,y,-.25,.01);
-box(.65,.12,4.5,edge,-4.04,1.18,-.25);
-for(const z of [-1.25,.75]){
- cyl(.34,.34,.13,wood,-3.55,.79,z);
- for(const dx of [-.2,.2])for(const dz of [-.2,.2])box(.055,.73,.055,dark,-3.55+dx,.37,z+dz,.01);
- ring(.25,.018,dark,-3.55,.28,z);
-}
+createCafeShell(scene);
 const {prepSurface, contactShade} = createServiceCorner(scene, metalReflections);
-paperPendant(scene,-1.84,4.47,.11);
-paperPendant(scene,.83,4.62,-.48);
+paperPendant(scene,-1.84,3.94,.11);
+paperPendant(scene,.83,4.12,-.48);
 const prepPoint = prepSurface.getWorldPosition(new THREE.Vector3());
-const serviceSlide = new THREE.Vector3(...GUEST_GLASS).sub(prepPoint);
+const guestGlass = new THREE.Vector3(...GUEST_GLASS);
+const serviceSlide = guestGlass.clone().sub(prepPoint);
 const receiptAnchor = new THREE.Vector3(...GUEST_RECEIPT);
+const caseCorner = new THREE.Vector3(PASTRY_CASE.x-PASTRY_CASE.width/2-.02,WORKTOP_Y,PASTRY_CASE.z+PASTRY_CASE.depth/2+.02);
 // Model the glass from its foot. Filling and sliding move the same glass.
 const drink = new THREE.Group(); scene.add(drink); drink.visible = false;
 const bodyHeight = .43, topHeight = .09, liquidBottom = .052;
-mesh(new THREE.CylinderGeometry(.255,.205,.68,32),mat('#d7e6dd',{transparent:true,opacity:.3,roughness:.1,side:THREE.DoubleSide,depthWrite:false}),0,.34,0,drink);
+const glassRadius=.255, glassHeight=.68;
+mesh(new THREE.CylinderGeometry(glassRadius,.205,glassHeight,32),mat('#d7e6dd',{transparent:true,opacity:.3,roughness:.1,side:THREE.DoubleSide,depthWrite:false}),0,glassHeight/2,0,drink);
 const drinkBody=mesh(new THREE.CylinderGeometry(.222,.19,bodyHeight,32),mat('#b98555'),0,0,0,drink);
 const drinkTop=mesh(new THREE.CylinderGeometry(.223,.223,topHeight,32),mat('#805036'),0,0,0,drink);
 const lip=mesh(new THREE.TorusGeometry(.25,.013,8,40),mat('#eff8ed',{transparent:true,opacity:.8}),0,.682,0,drink);
@@ -165,8 +132,8 @@ reducedMotion.addEventListener('change',()=>{
 const slipElement=document.createElement('div');
 slipElement.className='order-slip';
 slipElement.setAttribute('aria-hidden','true');
-slipElement.innerHTML='<span>ONE THING</span><strong>at a time.</strong>';
-document.querySelector('main').append(slipElement);
+slipElement.hidden=true;
+canvas.parentElement.append(slipElement);
 window.addEventListener('cafe-state', ({detail})=>{
   servedPose=detail.phase==='served';prepareReady=detail.phase==='serve'; stopServeMotion();stopArrival();stopPreparation();
   reward.group.visible=detail.phase==='counter' && !!detail.reward;
@@ -175,27 +142,35 @@ window.addEventListener('cafe-state', ({detail})=>{
   drink.visible=ready;
   drinkBody.material.color.set({coffee:'#b98555',matcha:'#8a9b61',cocoa:'#74503c','milk-cloud':'#e8dcc3','shaken-latte':'#cbb18b'}[detail.drink] || '#b98555');
   drinkTop.material.color.set({coffee:'#805036',matcha:'#687b3e',cocoa:'#553d2d','milk-cloud':'#fff3df','shaken-latte':'#e5d5b9'}[detail.drink] || '#805036');
-  slipElement.innerHTML=detail.phase==='counter' && detail.reward?`<span>FRESHLY EARNED</span><strong>${detail.reward}</strong>`:ready?'<span>FOR YOUR GUEST</span><strong>made with care.</strong>':'<span>ONE THING</span><strong>at a time.</strong>';
+  slipElement.hidden=!(reward.group.visible || ready);
+  slipElement.innerHTML=reward.group.visible?`<span>FRESHLY EARNED</span><strong>${detail.reward}</strong>`:'<span>FOR YOUR GUEST</span><strong>Pickup</strong>';
   draw();
 });
-scene.add(new THREE.HemisphereLight('#fff0d9','#bba294',1.45));
-const sun=new THREE.DirectionalLight('#ffebd1',2.3);
-sun.position.set(1.65,8,5.2);sun.castShadow=true;sun.shadow.mapSize.set(1024,1024);
-Object.assign(sun.shadow.camera,{left:-7,right:7,top:7,bottom:-7});
-sun.shadow.camera.updateProjectionMatrix();
-sun.shadow.normalBias=.028;sun.shadow.bias=-.00015;sun.shadow.radius=3;scene.add(sun);
 // A fixed composition: pointer, wheel and keyboard never change the camera.
 function draw(){
   renderer.render(scene,camera);
+  // Fit the paper between the projected rim of the drink and the nearest case foot.
+  const toPixel=x=>(x*.5+.5)*canvas.clientWidth;
+  const rim=guestGlass.clone().add(new THREE.Vector3(glassRadius,0,0).applyQuaternion(camera.quaternion));
+  rim.y+=glassHeight;
+  const left=toPixel(rim.project(camera).x)+5;
+  const right=toPixel(caseCorner.clone().project(camera).x)-5;
+  const width=Math.min(116,Math.max(1,right-left));
   const projected=receiptAnchor.clone().project(camera);
-  slipElement.style.left=`${(projected.x*.5+.5)*canvas.clientWidth}px`;
+  const center=THREE.MathUtils.clamp(toPixel(projected.x),left+width/2,right-width/2);
+  slipElement.style.setProperty('--paper-width',width+'px');
+  slipElement.style.left=`${center}px`;
   slipElement.style.top=`${(-projected.y*.5+.5)*canvas.clientHeight}px`;
 }
+let viewWidth=0, viewHeight=0;
 function resize(){
-  stopServeMotion();stopArrival();stopPreparation();
   const w=canvas.clientWidth,h=canvas.clientHeight;
+  if (!w || !h || (w===viewWidth && h===viewHeight)) return;
+  viewWidth=w; viewHeight=h;
+  stopServeMotion();stopArrival();stopPreparation();
   renderer.setSize(w,h,false);
   frameFixedCamera(camera,w,h);
   draw();
 }
-window.addEventListener('resize',resize);resize();
+new ResizeObserver(resize).observe(canvas);
+resize();

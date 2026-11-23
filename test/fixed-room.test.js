@@ -18,13 +18,23 @@ test('only the machine faces staff; guest anchors are independent on the front o
   }
 });
 
-test('desktop and narrow framing keep the machine, tray and both guest pickups visible', () => {
+test('responsive framing keeps a fixed pose and fits the counter, pendants and both pickups', () => {
   const camera = new THREE.PerspectiveCamera(36,1,.1,60);
   const prep = createPrepPan().surface.getWorldPosition(new THREE.Vector3()).toArray();
   const props=[MACHINE_POSITION,prep,GUEST_GLASS,GUEST_RECEIPT];
-  for (const [width,height] of [[1440,1000],[1024,768],[601,844],[390,650],[320,650]]) {
+  const outerCorners=[[-1.84,4.27,.11],[.83,4.46,-.48]];
+  for(const x of [COUNTER.x-COUNTER.width/2, COUNTER.x+COUNTER.width/2]) {
+    for(const z of [COUNTER.z-COUNTER.depth/2, COUNTER.z+COUNTER.depth/2]) {
+      outerCorners.push([x,WORKTOP_Y,z],[x,.02,z]);
+    }
+  }
+  let orientation;
+  for (const [width,height] of [[2160,690],[1440,690],[1024,558],[768,890],[390,534],[320,258]]) {
     frameFixedCamera(camera,width,height);
     camera.updateMatrixWorld();
+    assert.deepEqual(camera.position.toArray(),[4.85,3.85,8.40]);
+    orientation ??= camera.quaternion.clone();
+    assert.ok(camera.quaternion.equals(orientation));
     for(const point of props) {
       const projection=new THREE.Vector3(...point).project(camera);
       assert.ok(Math.abs(projection.x) < .84);
@@ -33,8 +43,11 @@ test('desktop and narrow framing keep the machine, tray and both guest pickups v
     const glass=new THREE.Vector3(...GUEST_GLASS).project(camera);
     const receipt=new THREE.Vector3(...GUEST_RECEIPT).project(camera);
     assert.ok((receipt.x-glass.x)*width/2 > 50, 'guest paper does not cover served glass');
+    for(const point of outerCorners) {
+      const edge=new THREE.Vector3(...point).project(camera);
+      assert.ok(Math.abs(edge.x)<.98 && Math.abs(edge.y)<.98,`counter or pendant clipped at ${width}×${height}`);
+    }
   }
-  assert.deepEqual(camera.position.toArray(),[8.4,6.3,12.2]);
 });
 
 test('the whole packet lands on the liner, inside the raised rim, from every arrival pose', () => {

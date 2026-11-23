@@ -9,7 +9,7 @@ fs.mkdirSync(artifacts,{recursive:true});
 const retired=/(look around|return to study view|rotate piece|decorate|backstore|shop|exterior|café coins)/i;
 const paper=page=>page.locator('.order-slip');
 async function pickupIsClear(page) {
-  const {frameFixedCamera,GUEST_GLASS}=await import('../src/fixed-room.js');
+  const {frameFixedCamera,GUEST_GLASS,PASTRY_CASE,WORKTOP_Y}=await import('../src/fixed-room.js');
   const canvas=await page.locator('#cafe').boundingBox();
   const receipt=await paper(page).boundingBox();
   const controls=await page.locator('#play-slip').boundingBox();
@@ -21,6 +21,9 @@ async function pickupIsClear(page) {
   lip.y+=.68;
   const glassRight=canvas.x+(lip.project(camera).x+1)*canvas.width/2;
   assert.ok(receipt.x>glassRight,'the projected paper clears the served glass');
+  const nearestCaseFoot=new THREE.Vector3(PASTRY_CASE.x-PASTRY_CASE.width/2-.02,WORKTOP_Y,PASTRY_CASE.z+PASTRY_CASE.depth/2+.02);
+  const caseLeft=canvas.x+(nearestCaseFoot.project(camera).x+1)*canvas.width/2;
+  assert.ok(receipt.x+receipt.width<caseLeft,'the paper clears the pastry case');
   assert.ok(receipt.x+receipt.width<controls.x || receipt.y+receipt.height<controls.y,
     'the interactive slip leaves the pickup visible');
 }

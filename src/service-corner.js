@@ -103,10 +103,11 @@ export function createServiceCorner(scene, metalReflections) {
   machine.box(1.95,.105,.85,satin,0,.159,.005,.04);
   machine.box(1.78,.66,.32,charcoal,0,.50,-.235,.08);
   machine.box(1.65,.48,.035,metalLight,0,.49,-.051);
-  // Plain brushed backplate: this is the face the guest actually sees.
-  machine.box(1.57,.43,.024,satin,0,.54,-.400,.022);
+  // Indigo enamel on the guest-facing back and end caps. The brew bay still faces staff.
+  const enamel=finish('#2B2C7A',.38,.12);
+  machine.box(1.57,.43,.024,enamel,0,.54,-.400,.022);
   for(const x of [-.91,.91]){
-    machine.box(.145,.82,.76,jade,x,.59,-.025,.069);
+    machine.box(.145,.82,.76,enamel,x,.59,-.025,.069);
     machine.box(.154,.31,.735,copper,x,.86,-.008,.074);
   }
   // Recessed vents under the rounded end cap pick up a slim highlight at the inspection angle.

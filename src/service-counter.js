@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import {RoundedBoxGeometry} from 'three/addons/geometries/RoundedBoxGeometry.js';
 import {finish, oakVeneer} from './corner-materials.js';
-import {COUNTER, PAN_POSITION, WORKTOP_Y} from './fixed-room.js';
+import {COUNTER, PAN_POSITION, PASTRY_CASE, WORKTOP_Y} from './fixed-room.js';
 
 function outline(shape, x, z, r) {
   shape.moveTo(-x+r,-z); shape.lineTo(x-r,-z); shape.quadraticCurveTo(x,-z,x,-z+r);
@@ -67,8 +67,8 @@ function addJoinery(bar) {
 }
 
 function addPastryCase(bar) {
-  const x = COUNTER.x+COUNTER.width/2-.78, z = .34;
-  const w = 1.24, d = .70, h = .66, sill = WORKTOP_Y+.070;
+  const {x,z,width:w,depth:d} = PASTRY_CASE;
+  const h = .66, sill = WORKTOP_Y+.070;
   const frame = finish('#44433E',.42,.22), deck = finish('#FFF7EA',.48);
   const glass = new THREE.MeshStandardMaterial({
     color: '#DBE7E4', roughness: .19, transparent: true, opacity: .14, depthWrite: false
