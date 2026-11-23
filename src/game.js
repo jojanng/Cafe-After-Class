@@ -1,7 +1,7 @@
 // Pure state transitions: time, randomness and identity are explicit inputs.
 export const INGREDIENTS = ['coffee', 'matcha', 'cocoa'];
 export const RECIPES = INGREDIENTS.map((ingredient, i) => ({ id: ingredient, name: ['Iced latte', 'Iced matcha latte', 'Iced cocoa'][i], needs: { milk: 1, ice: 1, [ingredient]: 1 } }));
-export const fresh = () => ({ version: 1, phase: 'idle', pantry: { milk: 3, ice: 3, coffee: 0, matcha: 0, cocoa: 0 }, recipes: [], receipts: [], session: null, carry: '', reward: null, drink: null, served: 0, order: null });
+export const fresh = () => ({ version: 1, phase: 'idle', pantry: { milk: 3, ice: 3, coffee: 0, matcha: 0, cocoa: 0 }, recipes: [], receipts: [], session: null, carry: '', reward: null, drink: null, served: 0, order: null, demoReceipts: [] });
 export const canMake = (state, recipe) => Object.entries(recipe.needs).every(([key, count]) => state.pantry[key] >= count);
 // Favor a different feasible drink, then learned recipes; new recipes remain discoverable.
 export function chooseOrder(state, previous = null) {
@@ -28,6 +28,7 @@ export function recipeStatus(state, recipe) {
 export function transition(state, action, { now, id, random = 0, demo = false } = {}) {
   // Reject an order action queued by a tab still showing an earlier guest.
   if(action.expectedServed !== undefined && action.expectedServed !== state.served)return state;
+  if(action.expectedSession !== undefined && action.expectedSession !== state.session?.id)return state;
   const s = structuredClone(state);
   if (action.type === 'start' && s.phase === 'idle') {
     const goal = String(action.goal || '').trim().slice(0, 160);
@@ -46,7 +47,9 @@ export function transition(state, action, { now, id, random = 0, demo = false } 
     s.pantry[ingredient]++; s.reward = ingredient;
     // Reusable café basics are restocked after focus, keeping every reward useful long term.
     s.pantry.milk = Math.max(s.pantry.milk, 1); s.pantry.ice = Math.max(s.pantry.ice, 1);
-    if (!demo) s.receipts.push({ ...s.session, ended: now, status: 'completed', ingredient });
+    const receipt={ ...s.session, ended: now, collectedAt: now, status: 'completed', ingredient };
+    if (demo) { s.demoReceipts ||= []; s.demoReceipts.push({ ...receipt, demo: true }); }
+    else s.receipts.push(receipt);
     s.order ||= chooseOrder(s,s.drink);
     s.phase = 'counter';
   } else if (action.type === 'make' && s.phase === 'counter') {

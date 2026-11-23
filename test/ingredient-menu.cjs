@@ -8,7 +8,7 @@ const fs=require('node:fs');
  for(const [name,width,height,reducedMotion] of cases){
   const ctx=await browser.newContext({viewport:{width,height},reducedMotion});await ctx.addInitScript(()=>{window.arrivals=0;addEventListener('cafe-ingredient-saved',()=>window.arrivals++);});
   const page=await ctx.newPage();const errors=[];page.on('pageerror',e=>errors.push(e.message));await page.goto('http://localhost:4173');const real=await page.evaluate(()=>localStorage.getItem('cafe-after-class.progress.v1'));
-  await page.locator('#demo-toggle').click();await page.locator('#goal').fill('A quiet chapter');await page.getByRole('button',{name:'Start demo focus'}).click();await page.getByRole('button',{name:'Goal complete · receive ingredient'}).waitFor({timeout:20000});
+  await page.locator('#demo-toggle').click();await page.locator('#goal').fill('A quiet chapter');await page.getByRole('button',{name:'Start demo focus'}).click();await page.getByRole('button',{name:'Collect receipt · goal complete'}).waitFor({timeout:20000});
   await page.evaluate(()=>{const b=document.querySelector('[data-action="complete"]');b.click();b.click()});await page.locator('.ingredient-receipt').waitFor();
   assert.equal(await page.evaluate(()=>window.arrivals),1);let saved=await page.evaluate(()=>JSON.parse(sessionStorage.getItem('cafe-after-class.demo.v1')));assert.equal(saved.pantry[saved.reward],1);assert.equal(saved.receipts.length,0);
   await page.screenshot({path:`${output}/${name}-ingredient.png`,fullPage:true});

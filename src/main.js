@@ -141,8 +141,31 @@ window.addEventListener('cafe-ingredient-saved',()=>{
   }
   frame(start);
 });
+// Preparation is a stationary fill/layer gesture, separate from the serving slide.
+const pour=new THREE.Group();scene.add(pour);pour.visible=false;
+const pitcher=new THREE.Mesh(new THREE.CylinderGeometry(.15,.12,.27,20),ceramic);
+pitcher.position.set(.87,3.14,1.06);pitcher.rotation.z=.65;pour.add(pitcher);
+const stream=new THREE.Mesh(new THREE.CylinderGeometry(.018,.025,.44,12),mat('#d8c3a0'));
+stream.position.set(.72,2.89,1.06);pour.add(stream);
+let prepareFrame=0,prepareReady=false;
+function stopPreparation(){cancelAnimationFrame(prepareFrame);prepareFrame=0;pour.visible=false;
+  drinkBody.scale.y=1;drinkTop.scale.y=1;
+  drinkBody.position.y=drinkOrigins[1].y-(servedPose?.1:0);
+  drinkTop.position.y=drinkOrigins[2].y-(servedPose?.1:0);
+}
+window.addEventListener('cafe-prepare-saved',()=>{
+  stopPreparation();if(reducedMotion.matches || !prepareReady)return;
+  const start=performance.now();pour.visible=true;stream.material.color.copy(drinkTop.material.color);
+  function frame(now){const t=Math.min(1,(now-start)/700);const fill=1-Math.pow(1-t,2);
+    drinkBody.scale.y=Math.max(.005,fill);drinkBody.position.y=2.105+.215*fill;
+    drinkTop.scale.y=Math.max(.005,(fill-.72)/.28);drinkTop.position.y=2.105+.43*fill+.045*drinkTop.scale.y;
+    pour.visible=t<.85;renderer.render(scene,camera);
+    if(t<1)prepareFrame=requestAnimationFrame(frame);else {stopPreparation();renderer.render(scene,camera);}
+  }
+  frame(start);
+});
 reducedMotion.addEventListener('change',()=>{
-  stopServeMotion();stopArrival();renderer.render(scene,camera);
+  stopServeMotion();stopArrival();stopPreparation();renderer.render(scene,camera);
   if(reducedMotion.matches) document.getAnimations().forEach(a=>a.finish());
 });
 const slipElement=document.createElement('div');
@@ -152,7 +175,7 @@ slipElement.innerHTML='<span>ONE THING</span><strong>at a time.</strong>';
 document.querySelector('main').append(slipElement);
 const slipAnchor=new THREE.Vector3(1.95,1.98,1.15);
 window.addEventListener('cafe-state', ({detail})=>{
-  servedPose=detail.phase==='served'; stopServeMotion();stopArrival();
+  servedPose=detail.phase==='served';prepareReady=detail.phase==='serve'; stopServeMotion();stopArrival();stopPreparation();
   ingredientPacket.visible=detail.phase==='counter' && !!detail.reward;
   if(ingredientPacket.visible)labelPacket(detail.reward);
   const ready=['serve','served'].includes(detail.phase);
@@ -164,5 +187,5 @@ window.addEventListener('cafe-state', ({detail})=>{
 });
 scene.add(new THREE.HemisphereLight('#fff3da','#88745c',2.1));
 const sun=new THREE.DirectionalLight('#fff0d2',3.2);sun.position.set(-5,8,5);sun.castShadow=true;sun.shadow.mapSize.set(2048,2048);sun.shadow.camera.left=-7;sun.shadow.camera.right=7;sun.shadow.camera.top=7;sun.shadow.camera.bottom=-7;sun.shadow.normalBias=.06;sun.shadow.bias=-.0001;sun.shadow.radius=4;scene.add(sun);
-function resize(){stopServeMotion();stopArrival();const w=canvas.clientWidth,h=canvas.clientHeight;renderer.setSize(w,h,false);camera.aspect=w/h;const mobile=w<600;camera.fov=mobile?43:36;camera.position.set(mobile?7.8:8.2,mobile?6.2:6.3,mobile?11.8:11.8);camera.lookAt(mobile?.05:0, mobile?2.15:2.0,.25);if(mobile){camera.position.set(8.8,6.9,13.5);camera.setViewOffset(w,h,0,-h*.07,w,h);}else camera.clearViewOffset();camera.updateProjectionMatrix();renderer.render(scene,camera);const projected=slipAnchor.clone().project(camera);slipElement.style.left=`${(projected.x*.5+.5)*w}px`;slipElement.style.top=`${(-projected.y*.5+.5)*h}px`;}
+function resize(){stopServeMotion();stopArrival();stopPreparation();const w=canvas.clientWidth,h=canvas.clientHeight;renderer.setSize(w,h,false);camera.aspect=w/h;const mobile=w<600;camera.fov=mobile?43:36;camera.position.set(mobile?7.8:8.2,mobile?6.2:6.3,mobile?11.8:11.8);camera.lookAt(mobile?.05:0, mobile?2.15:2.0,.25);if(mobile){camera.position.set(8.8,6.9,13.5);camera.setViewOffset(w,h,0,-h*.07,w,h);}else camera.clearViewOffset();camera.updateProjectionMatrix();renderer.render(scene,camera);const projected=slipAnchor.clone().project(camera);slipElement.style.left=`${(projected.x*.5+.5)*w}px`;slipElement.style.top=`${(-projected.y*.5+.5)*h}px`;}
 window.addEventListener('resize',resize);resize();

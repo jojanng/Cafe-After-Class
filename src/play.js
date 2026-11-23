@@ -27,7 +27,7 @@ function render() {
   let body = '';
   if (state.phase === 'idle') body = `<h2>Make room for a goal.</h2><form id="goal-form"><label for="goal">What will you work on?</label><textarea id="goal" name="goal" maxlength="160" required rows="2" placeholder="Read a chapter, work through a problem…">${escape(state.carry)}</textarea>${demo ? '<p>A 10-second practice session.</p>' : '<fieldset><legend>Focus time</legend><label><input type="radio" name="minutes" value="25" checked> 25 minutes</label><label><input type="radio" name="minutes" value="45"> 45 minutes</label></fieldset>'}<button type="submit">${demo ? 'Start demo focus' : 'Begin focus'}</button></form><p class="hint">Focus → ingredient → make → serve.<br>Milk and ice are already in your pantry.</p>`;
   if (state.phase === 'focus') body = `<h2>${escape(state.session.goal)}</h2><p id="timer" role="timer" aria-label="Time remaining">${timeText()}</p><p class="hint">A quiet room. One thing at a time.<br>Your deadline is saved; you may leave this tab.</p>${button('carry','Carry goal forward · no reward')}`;
-  if (state.phase === 'review') body = `<h2>Your focus time is complete.</h2><p>${escape(state.session.goal)}</p><p class="hint">Did you finish your goal? Unfinished work can come with you.</p>${button('complete','Goal complete · receive ingredient')}${button('carry','Carry goal forward · no reward')}`;
+  if (state.phase === 'review') body = `<article class="study-receipt"><span>${demo?'PRACTICE RECEIPT':'STUDY RECEIPT'} · READY TO COLLECT</span><h2>${escape(state.session.goal)}</h2><p>${demo?'10 sec':`${state.session.duration/60000} minutes`} of focus</p><em>A little time, well spent.</em></article><p class="hint">Goal finished? Collect your receipt and ingredient. Unfinished work can come with you.</p>${button('complete','Collect receipt · goal complete')}${button('carry','Carry goal forward · no reward')}`;
   if (state.phase === 'counter') body = `${state.reward ? `<p class="ingredient-receipt" role="status">+1 ${escape(state.reward)} · Pantry: ${state.pantry[state.reward]}</p>` : ''}${orderSlip()}`;
   if (state.phase === 'serve') body = `<h2>Ready on the tray.</h2><p>${RECIPES.find(r=>r.id===state.drink).name}</p><p class="hint">One drink for your waiting guest.</p>${button('serve','Serve drink')}`;
   if (state.phase === 'served') body = `<h2>A small kindness.</h2>${state.lastServeUnlocked ? `<aside class="recipe-card" aria-label="New recipe"><span>NEW IN YOUR MENU</span><strong>${RECIPES.find(r=>r.id===state.drink).name}</strong><small>1 milk · 1 ice · 1 ${state.drink}</small></aside>` : ''}<p>Your guest enjoyed their ${RECIPES.find(r=>r.id===state.drink).name.toLowerCase()}.</p><p class="hint">Recipe saved in ${demo ? 'the demo' : 'your'} menu.</p>${button('menu','See recipe in menu')}${state.order ? `<p class="hint">Next order ${String(state.served+1).padStart(3,'0')}: ${RECIPES.find(r=>r.id===state.order).name}</p>${button('take-order','Take the next order')}` : '<p class="hint">The pantry needs a refill before another order. Your next focus session will help.</p>'}${button('next','Write the next goal')}`;
@@ -46,26 +46,44 @@ function showBook(kind) {
     return `<section class="menu-recipe" data-recipe="${r.id}"><p class="menu-state">${status.unlocked?'Unlocked':'Not yet unlocked · serve once to learn'}</p><h3>${r.name}</h3><p class="menu-description">${{coffee:'Roasted coffee, soft milk, clear ice.',matcha:'Green tea, soft milk, clear ice.',cocoa:'Rich cocoa, soft milk, clear ice.'}[r.id]}</p><p class="menu-needs">${Object.entries(r.needs).map(([k,n])=>`${n} ${k} (${state.pantry[k]} in pantry)`).join(' · ')}</p><p class="menu-availability">${availability}</p>${status.swappable ? button('swap',`Swap order to ${r.name.toLowerCase()}`,`data-recipe="${r.id}"`) : button('make',`Make ${r.name.toLowerCase()}`,`data-recipe="${r.id}" ${status.available?'':'disabled'}`)}</section>`;
   }).join('')}`;
   if (kind === 'pantry') content.innerHTML = `<h2 id="book-title">${demo?'Demo pantry':'In the pantry'}</h2><ul>${Object.entries(state.pantry).map(([k,v])=>`<li>${k}<strong>${v}</strong></li>`).join('')}</ul><p>Each focus reward is coffee, matcha, or cocoa. Milk and ice are topped up to at least one after focus.</p>`;
-  if (kind === 'receipts') content.innerHTML = `<h2 id="book-title">The receipt book</h2>${demo ? '<p>The demo never writes study receipts.</p>' : state.receipts.length ? state.receipts.slice().reverse().map(r=>`<section><p>${escape(new Date(r.ended).toLocaleString())} · ${r.duration / 60000} min planned</p><h3>${escape(r.goal)}</h3><p>${r.status==='completed'?`Completed · +1 ${escape(r.ingredient)}`:'Carried forward · no reward'}</p></section>`).join('') : '<p>Your real study sessions will be recorded here. Carried goals are marked unfinished and earn no reward.</p>'}`;
+  if (kind === 'receipts') {
+    const receipts=demo ? state.demoReceipts || [] : state.receipts;
+    content.innerHTML=`<h2 id="book-title">${demo?'Demo receipt book':'The receipt book'}</h2>${demo?'<p>Temporary practice receipts. Your real study book stays unchanged.</p>':''}${receipts.length ? receipts.slice().reverse().map(r=>`<section><p>${escape(new Date(r.ended).toLocaleString())} · ${r.duration<60000?`${r.duration/1000} sec`:`${r.duration/60000} min`} planned</p><h3>${escape(r.goal)}</h3><p>${r.status==='completed'?`Collected · +1 ${escape(r.ingredient)}`:'Carried forward · no reward'}</p></section>`).join('') : '<p>No collected receipts yet. Finish a focus session and collect the paper on your slip.</p>'}`;
+  }
   if(!notebook.open)notebook.showModal();
+}
+function receiptPickup(snapshot) {
+  window.dispatchEvent(new CustomEvent('cafe-receipt-collected'));
+  if(!snapshot || matchMedia('(prefers-reduced-motion: reduce)').matches)return;
+  const {paper,rect}=snapshot;
+  paper.classList.add('receipt-pickup');paper.setAttribute('aria-hidden','true');
+  Object.assign(paper.style,{left:`${rect.left}px`,top:`${rect.top}px`,width:`${rect.width}px`,height:`${rect.height}px`});
+  document.body.append(paper);
+  const animation=paper.animate([{transform:'translateY(0) rotate(0)',opacity:1},{transform:'translateY(-26px) rotate(-3deg) scale(.96)',opacity:1,offset:.75},{transform:'translateY(-36px) rotate(-5deg) scale(.92)',opacity:0}],{duration:380,easing:'ease-in',fill:'forwards'});
+  animation.finished.catch(()=>{}).finally(()=>paper.remove());
 }
 async function act(action) {
   if (busy) return;
   busy = true;
+  const paper=action.type==='complete' ? slip.querySelector('.study-receipt') : null;
+  const pickup=paper ? {paper:paper.cloneNode(true),rect:paper.getBoundingClientRect()} : null;
+  if(['complete','carry'].includes(action.type))action={...action,expectedSession:state.session?.id};
   if(['make','serve','swap','take-order','study','next'].includes(action.type))action={...action,expectedServed:state.served};
   try {
     if (!navigator.locks) throw new Error('Saving safely requires a modern browser on localhost or HTTPS.');
-    let served = false, ingredientArrived = false;
+    let served = false, ingredientArrived = false, made = false;
     await navigator.locks.request('cafe-progress', () => {
       const random = crypto.getRandomValues(new Uint32Array(1))[0] / 2**32;
       const result = applyWithEffects(store(), key(), action, { now: Date.now(), id: crypto.randomUUID(), random, demo });
-      state = result.state; served = result.served; ingredientArrived = result.ingredientArrived;
+      state = result.state; served = result.served; ingredientArrived = result.ingredientArrived; made = result.made;
     });
     notice.textContent = ''; render();
     if(action.type==='make' && state.phase==='serve' && notebook.open){notebook.close();slip.querySelector('[data-action="serve"]').focus();}
     if(action.type==='swap' && notebook.open){notebook.close();slip.querySelector('[data-action="make"]')?.focus();}
+    if(made)window.dispatchEvent(new CustomEvent('cafe-prepare-saved'));
     if (ingredientArrived) {
-      notice.textContent = `Received one ${state.reward}. Pantry: ${state.pantry[state.reward]}.`;
+      receiptPickup(pickup);
+      notice.textContent = `Receipt collected. Received one ${state.reward}. Pantry: ${state.pantry[state.reward]}.`;
       window.dispatchEvent(new CustomEvent('cafe-ingredient-saved'));
     }
     if (served) {

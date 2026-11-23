@@ -20,7 +20,7 @@ export function applyWithEffects(storage, key, action, context) {
   const before = read(storage, key);
   const after = transition(before, action, context);
   if (after !== before) storage.setItem(key, JSON.stringify(after));
-  return { state: after, ingredientArrived: action.type === 'complete' && before.phase === 'review' && after.phase === 'counter' && after !== before, served: action.type === 'serve' && before.phase === 'serve' && after.phase === 'served' && after.served === before.served + 1 };
+  return { state: after, made: action.type === 'make' && before.phase === 'counter' && after.phase === 'serve' && after !== before, ingredientArrived: action.type === 'complete' && before.phase === 'review' && after.phase === 'counter' && after !== before, served: action.type === 'serve' && before.phase === 'serve' && after.phase === 'served' && after.served === before.served + 1 };
 }
 export function apply(storage, key, action, context) {
   return applyWithEffects(storage, key, action, context).state;

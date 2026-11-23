@@ -9,7 +9,7 @@ const {chromium}=require('playwright');const assert=require('node:assert/strict'
  let review=transition(fresh(),{type:'start',goal:'Preserved goal',minutes:25},{now:1,id:'saved-session'});review=transition(review,{type:'tick'},{now:1500001});review.pantry.cocoa=2;review.recipes=['cocoa'];
  await page.evaluate(s=>localStorage.setItem('cafe-after-class.progress.v1',JSON.stringify(s)),review);await page.reload();
  const second=await ctx.newPage();await second.goto('http://localhost:4173');await second.getByRole('button',{name:'Menu',exact:true}).click();
- await page.getByRole('button',{name:'Goal complete · receive ingredient'}).click();await page.locator('.ingredient-receipt').waitFor();
+ await page.getByRole('button',{name:'Collect receipt · goal complete'}).click();await page.locator('.ingredient-receipt').waitFor();
  assert.equal(await page.evaluate(()=>window.arrivals),1);assert.equal(await page.evaluate(()=>window.frames),0);
  await second.waitForFunction(()=>document.body.dataset.phase==='counter');assert.equal(await second.evaluate(()=>window.arrivals),0);assert.equal(await second.evaluate(()=>window.frames),0);
  assert.match(await second.locator('.menu-recipe[data-recipe="cocoa"]').innerText(),/Unlocked/);assert.equal(await second.locator('.menu-recipe[data-recipe="cocoa"] button').isEnabled(),true);

@@ -60,3 +60,11 @@ The counter slip now names one order. Make and serve it to advance the guest cou
 **Swap to another ready drink** is free. The menu also lets you select a ready alternate; Make then consumes its ingredients. Missing ingredients are listed on the slip and menu. If nothing can be made, use **Study for the next order**; no reward or inventory is lost merely by swapping or returning to study. Each completed focus provides a usable flavor and at least one milk/ice, so recovery always has a playable option.
 
 Old v1 saves receive a safe order default without rewriting their data on open. The pending order is persisted with every successful transition, and Serve rolls over exactly once. Run `node test/orders-browser.cjs` for the two-order browser review; set `CAFE_ARTIFACTS` for screenshots.
+
+## Preparation and manual receipt collection (review pass)
+
+After either timer ends, a paper receipt waits on the slip. **Collect receipt · goal complete** files it and awards one ingredient; nothing is collected automatically. The 10-second demo has its own temporary receipt book, accessible through **Receipts**, without writing real study receipts. If the goal is unfinished, carry it forward without a reward.
+
+**Make** now pours and fills the glass briefly; **Serve** still slides it across the counter. Reduced motion shows final states immediately. Saving is independent of animation and repeated clicks cannot duplicate a study reward, ingredient deduction, receipt, or order.
+
+Run `node test/receipt-preparation-browser.cjs` for the receipt/preparation smoke checks. This review pass follows pushed checkpoint `6db0663e59631c0a7417342f522c7970c4b83cf0`.
