@@ -1,5 +1,8 @@
 import * as THREE from 'three';
 
+export const finish = (color, roughness=.72, metalness=0) =>
+  new THREE.MeshStandardMaterial({color, roughness, metalness});
+
 // All artwork is drawn once at startup. Repeatable grain keeps every saved room consistent.
 export function paintedMap(width, height, paint) {
   const canvas = document.createElement('canvas');
@@ -27,6 +30,28 @@ export function oakGrain() {
       ctx.stroke();
     }
   });
+}
+
+// Fine, nearly straight fibers for the rift-cut veneer on the counter fronts.
+export function oakVeneer() {
+  const map = paintedMap(384, 512, (ctx, w, h) => {
+    ctx.fillStyle = '#FFF9EF';
+    ctx.fillRect(0,0,w,h);
+    for (let x=-6, i=0; x<w+6; i++) {
+      const streak = Math.sin(i*19.73)**2;
+      ctx.strokeStyle = `rgba(102,73,50,${.022+.105*streak})`;
+      ctx.lineWidth = .65+1.45*Math.sin(i*2.12)**4;
+      ctx.beginPath();
+      for (let y=0; y<=h; y+=8) {
+        const drift = 2.8*Math.sin(y/205+x/37) + .85*Math.sin(y/67+x/18);
+        ctx.lineTo(x+drift,y);
+      }
+      ctx.stroke();
+      x += 1.5+2.8*streak;
+    }
+  });
+  map.wrapS = map.wrapT = THREE.RepeatWrapping;
+  return map;
 }
 
 // Frosted view of a neighboring roof and a break in the trees. The sash owns the view.

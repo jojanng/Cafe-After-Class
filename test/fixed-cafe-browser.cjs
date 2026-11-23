@@ -1,4 +1,5 @@
 const {chromium}=require('playwright');
+const THREE=require('three');
 const assert=require('node:assert/strict');
 const fs=require('node:fs');
 const artifacts=process.env.CAFE_ARTIFACTS || 'artifacts';
@@ -7,6 +8,22 @@ const realKey='cafe-after-class.progress.v1', demoKey='cafe-after-class.demo.v1'
 fs.mkdirSync(artifacts,{recursive:true});
 const retired=/(look around|return to study view|rotate piece|decorate|backstore|shop|exterior|café coins)/i;
 const paper=page=>page.locator('.order-slip');
+async function pickupIsClear(page) {
+  const {frameFixedCamera,GUEST_GLASS}=await import('../src/fixed-room.js');
+  const canvas=await page.locator('#cafe').boundingBox();
+  const receipt=await paper(page).boundingBox();
+  const controls=await page.locator('#play-slip').boundingBox();
+  const camera=new THREE.PerspectiveCamera(36,1,.1,60);
+  frameFixedCamera(camera,canvas.width,canvas.height);
+  camera.updateMatrixWorld();
+  const cameraRight=new THREE.Vector3(1,0,0).applyQuaternion(camera.quaternion);
+  const lip=new THREE.Vector3(...GUEST_GLASS).addScaledVector(cameraRight,.255);
+  lip.y+=.68;
+  const glassRight=canvas.x+(lip.project(camera).x+1)*canvas.width/2;
+  assert.ok(receipt.x>glassRight,'the projected paper clears the served glass');
+  assert.ok(receipt.x+receipt.width<controls.x || receipt.y+receipt.height<controls.y,
+    'the interactive slip leaves the pickup visible');
+}
 async function noNavigation(page) {
   assert.equal(await page.getByRole('button',{name:retired}).count(),0);
   assert.equal(await page.locator('#camera-tools, #room-paper, #backstore, [data-camera]').count(),0);
@@ -82,6 +99,16 @@ async function makeOrder(page,i,mode) {
       await page.getByRole('button',{name:'Write the next goal'}).click();
       await makeOrder(page,2,mode);
       await noNavigation(page);
+      await pickupIsClear(page);
+      if (!mobile) {
+        await page.setViewportSize({width:768,height:1024});
+        await page.waitForFunction(()=>{
+          const canvas=document.querySelector('#cafe');
+          return canvas.width===Math.floor(canvas.clientWidth*Math.min(devicePixelRatio,2));
+        });
+        await pickupIsClear(page);
+        await page.setViewportSize({width:1440,height:1000});
+      }
       await page.reload();
       await page.locator('#goal').waitFor();
       assert.equal(await page.evaluate(key=>localStorage.getItem(key),realKey),old);

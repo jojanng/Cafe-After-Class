@@ -2,9 +2,10 @@ import * as THREE from 'three';
 import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
 import {RoomEnvironment} from 'three/addons/environments/RoomEnvironment.js';
 import {createServiceCorner} from './service-corner.js';
+import {createIngredientReward} from './service-counter.js';
 import {createOakBoards,paperPendant} from './corner-shell.js';
 import {windowGlass} from './corner-materials.js';
-import { TRAY_GLASS, GUEST_GLASS, GUEST_RECEIPT, frameFixedCamera } from './fixed-room.js';
+import {GUEST_GLASS, GUEST_RECEIPT, frameFixedCamera} from './fixed-room.js';
 import './style.css';
 
 const canvas = document.querySelector('#cafe');
@@ -31,8 +32,8 @@ const wood = mat('#b58045');
 const edge = mat('#d0a064');
 const dark = mat('#383a32');
 const ceramic = mat('#eee6d6');
-const mesh = (geo, material, x, y, z) => {
-  const m = new THREE.Mesh(geo, material); m.position.set(x,y,z); m.castShadow = true; m.receiveShadow = true; scene.add(m); return m;
+const mesh = (geo, material, x, y, z, parent=scene) => {
+  const m = new THREE.Mesh(geo, material); m.position.set(x,y,z); m.castShadow = true; m.receiveShadow = true; parent.add(m); return m;
 };
 const box = (w,h,d,m,x,y,z,r=.04) => mesh(new RoundedBoxGeometry(w,h,d,2,r),m,x,y,z);
 const cyl = (rt,rb,h,m,x,y,z,n=32) => mesh(new THREE.CylinderGeometry(rt,rb,h,n),m,x,y,z);
@@ -67,27 +68,33 @@ for(const z of [-1.25,.75]){
  for(const dx of [-.2,.2])for(const dz of [-.2,.2])box(.055,.73,.055,dark,-3.55+dx,.37,z+dz,.01);
  ring(.25,.018,dark,-3.55,.28,z);
 }
-createServiceCorner(scene, metalReflections);
+const {prepSurface, contactShade} = createServiceCorner(scene, metalReflections);
 paperPendant(scene,-1.84,4.47,.11);
 paperPendant(scene,.83,4.62,-.48);
-const drinkStart=scene.children.length;
-// These customer-side world coordinates are independent of the staff-facing machine.
-const [glassX, trayY, glassZ] = TRAY_GLASS;
-const serviceSlide = new THREE.Vector3(...GUEST_GLASS).sub(new THREE.Vector3(...TRAY_GLASS));
+const prepPoint = prepSurface.getWorldPosition(new THREE.Vector3());
+const serviceSlide = new THREE.Vector3(...GUEST_GLASS).sub(prepPoint);
 const receiptAnchor = new THREE.Vector3(...GUEST_RECEIPT);
-cyl(.255,.205,.68,mat('#d7e6dd',{transparent:true,opacity:.3,roughness:.1,side:THREE.DoubleSide,depthWrite:false}),glassX,trayY+.34,glassZ);
-const drinkBody=cyl(.222,.19,.43,mat('#b98555'),glassX,trayY+.267,glassZ);
-const drinkTop=cyl(.223,.223,.09,mat('#805036'),glassX,trayY+.527,glassZ);
-ring(.25,.013,mat('#eff8ed',{transparent:true,opacity:.8}),glassX,trayY+.682,glassZ);
-for(const [dx,dz,a] of [[-.09,-.06,.2],[.08,-.04,.7],[.01,.12,.4]]){const ice=box(.16,.13,.16,mat('#d3dfce',{transparent:true,opacity:.72,roughness:.22}),glassX+dx,trayY+.607,glassZ+dz,.025);ice.rotation.y=a;}
-const straw=cyl(.018,.018,.72,mat('#e8ddbf'),glassX+.11,trayY+.837,glassZ-.02,12);straw.rotation.z=-.14;
-const drinkMeshes=scene.children.slice(drinkStart);
-drinkMeshes.forEach(m=>m.visible=false);
-const drinkOrigins=drinkMeshes.map(m=>m.position.clone());
+// Model the glass from its foot. Filling and sliding move the same glass.
+const drink = new THREE.Group(); scene.add(drink); drink.visible = false;
+const bodyHeight = .43, topHeight = .09, liquidBottom = .052;
+mesh(new THREE.CylinderGeometry(.255,.205,.68,32),mat('#d7e6dd',{transparent:true,opacity:.3,roughness:.1,side:THREE.DoubleSide,depthWrite:false}),0,.34,0,drink);
+const drinkBody=mesh(new THREE.CylinderGeometry(.222,.19,bodyHeight,32),mat('#b98555'),0,0,0,drink);
+const drinkTop=mesh(new THREE.CylinderGeometry(.223,.223,topHeight,32),mat('#805036'),0,0,0,drink);
+const lip=mesh(new THREE.TorusGeometry(.25,.013,8,40),mat('#eff8ed',{transparent:true,opacity:.8}),0,.682,0,drink);
+lip.rotation.x=Math.PI/2;
+for(const [dx,dz,a] of [[-.09,-.06,.2],[.08,-.04,.7],[.01,.12,.4]]){
+  const ice=mesh(new RoundedBoxGeometry(.16,.13,.16,2,.025),mat('#d3dfce',{transparent:true,opacity:.72,roughness:.22}),dx,.607,dz,drink);
+  ice.rotation.y=a;
+}
+const straw=mesh(new THREE.CylinderGeometry(.018,.018,.72,12),mat('#e8ddbf'),.11,.837,-.02,drink);
+straw.rotation.z=-.14;
 const reducedMotion=matchMedia('(prefers-reduced-motion: reduce)');
 let serveFrame=0, servedPose=false;
 function poseDrink(progress) {
-  drinkMeshes.forEach((m,i)=>m.position.copy(drinkOrigins[i]).addScaledVector(serviceSlide,progress));
+  drink.position.copy(prepPoint).addScaledVector(serviceSlide,progress);
+  // Lift just enough to clear the pan wall on the way to the customer.
+  const travel = Math.min(1,progress);
+  drink.position.y = THREE.MathUtils.lerp(prepPoint.y,GUEST_GLASS[1],travel) + .18*Math.sin(Math.PI*travel);
 }
 function stopServeMotion() {
   cancelAnimationFrame(serveFrame); serveFrame=0;
@@ -108,47 +115,44 @@ window.addEventListener('cafe-serve-saved', ()=>{
   serveFrame=requestAnimationFrame(frame);
 });
 // One original paper ingredient packet; state rendering sets its final pose.
-const ingredientPacket=new THREE.Group();scene.add(ingredientPacket);
-const packetBody=new THREE.Mesh(new RoundedBoxGeometry(.43,.5,.2,2,.025),mat('#d9be8d'));
-packetBody.position.y=.25;packetBody.castShadow=true;ingredientPacket.add(packetBody);
 const packetCanvas=document.createElement('canvas');packetCanvas.width=256;packetCanvas.height=256;
 const packetTexture=new THREE.CanvasTexture(packetCanvas);packetTexture.colorSpace=THREE.SRGBColorSpace;
-const packetLabel=new THREE.Mesh(new THREE.PlaneGeometry(.36,.36),mat('#ffffff',{map:packetTexture}));
-packetLabel.position.set(0,.27,.105);ingredientPacket.add(packetLabel);
+const reward=createIngredientReward(prepSurface,packetTexture,contactShade);
 let arrivalFrame=0;
-function stopArrival(){cancelAnimationFrame(arrivalFrame);arrivalFrame=0;ingredientPacket.position.set(.57,2.055,.4);}
+function stopArrival(){cancelAnimationFrame(arrivalFrame);arrivalFrame=0;reward.place(0);}
 function labelPacket(ingredient){
   const p=packetCanvas.getContext('2d');p.fillStyle='#f8efda';p.fillRect(0,0,256,256);
   p.fillStyle='#62533f';p.textAlign='center';p.font='24px monospace';p.fillText('PANTRY',128,60);
   p.font='34px Georgia';p.fillText(ingredient,128,133);p.font='24px monospace';p.fillText('+ 1',128,198);packetTexture.needsUpdate=true;
 }
 window.addEventListener('cafe-ingredient-saved',()=>{
-  stopArrival();if(reducedMotion.matches || !ingredientPacket.visible)return;
+  stopArrival();if(reducedMotion.matches || !reward.group.visible)return;
   const start=performance.now();
   function frame(now){const t=Math.min(1,(now-start)/420);const remaining=Math.pow(1-t,3);
-    ingredientPacket.position.set(.57-.18*remaining,2.055+.22*remaining,.4);
+    reward.place(remaining);
     renderer.render(scene,camera);if(t<1)arrivalFrame=requestAnimationFrame(frame);else arrivalFrame=0;
   }
   frame(start);
 });
 // Preparation is a stationary fill/layer gesture, separate from the serving slide.
-const pour=new THREE.Group();scene.add(pour);pour.visible=false;
+const pour=new THREE.Group();prepSurface.add(pour);pour.visible=false;
 const pitcher=new THREE.Mesh(new THREE.CylinderGeometry(.15,.12,.27,20),ceramic);
-pitcher.position.set(glassX+.15,trayY+1.087,glassZ);pitcher.rotation.z=.65;pour.add(pitcher);
+pitcher.position.set(.15,1.087,0);pitcher.rotation.z=.65;pour.add(pitcher);
 const stream=new THREE.Mesh(new THREE.CylinderGeometry(.018,.025,.44,12),mat('#d8c3a0'));
-stream.position.set(glassX,trayY+.837,glassZ);pour.add(stream);
+stream.position.set(0,.837,0);pour.add(stream);
 let prepareFrame=0,prepareReady=false;
-function stopPreparation(){cancelAnimationFrame(prepareFrame);prepareFrame=0;pour.visible=false;
-  drinkBody.scale.y=1;drinkTop.scale.y=1;
-  drinkBody.position.y=drinkOrigins[1].y + (servedPose ? serviceSlide.y : 0);
-  drinkTop.position.y=drinkOrigins[2].y + (servedPose ? serviceSlide.y : 0);
+function fillGlass(fill) {
+  drinkBody.scale.y=Math.max(.005,fill);
+  drinkBody.position.y=liquidBottom+bodyHeight*drinkBody.scale.y/2;
+  drinkTop.scale.y=Math.max(.005,(fill-.72)/.28);
+  drinkTop.position.y=liquidBottom+bodyHeight*drinkBody.scale.y+topHeight*drinkTop.scale.y/2;
 }
+function stopPreparation(){cancelAnimationFrame(prepareFrame);prepareFrame=0;pour.visible=false;fillGlass(1);}
 window.addEventListener('cafe-prepare-saved',()=>{
   stopPreparation();if(reducedMotion.matches || !prepareReady)return;
   const start=performance.now();pour.visible=true;stream.material.color.copy(drinkTop.material.color);
   function frame(now){const t=Math.min(1,(now-start)/700);const fill=1-Math.pow(1-t,2);
-    drinkBody.scale.y=Math.max(.005,fill);drinkBody.position.y=2.105+.215*fill;
-    drinkTop.scale.y=Math.max(.005,(fill-.72)/.28);drinkTop.position.y=2.105+.43*fill+.045*drinkTop.scale.y;
+    fillGlass(fill);
     pour.visible=t<.85;renderer.render(scene,camera);
     if(t<1)prepareFrame=requestAnimationFrame(frame);else {stopPreparation();renderer.render(scene,camera);}
   }
@@ -165,10 +169,10 @@ slipElement.innerHTML='<span>ONE THING</span><strong>at a time.</strong>';
 document.querySelector('main').append(slipElement);
 window.addEventListener('cafe-state', ({detail})=>{
   servedPose=detail.phase==='served';prepareReady=detail.phase==='serve'; stopServeMotion();stopArrival();stopPreparation();
-  ingredientPacket.visible=detail.phase==='counter' && !!detail.reward;
-  if(ingredientPacket.visible)labelPacket(detail.reward);
+  reward.group.visible=detail.phase==='counter' && !!detail.reward;
+  if(reward.group.visible)labelPacket(detail.reward);
   const ready=['serve','served'].includes(detail.phase);
-  drinkMeshes.forEach(m=>m.visible=ready);
+  drink.visible=ready;
   drinkBody.material.color.set({coffee:'#b98555',matcha:'#8a9b61',cocoa:'#74503c','milk-cloud':'#e8dcc3','shaken-latte':'#cbb18b'}[detail.drink] || '#b98555');
   drinkTop.material.color.set({coffee:'#805036',matcha:'#687b3e',cocoa:'#553d2d','milk-cloud':'#fff3df','shaken-latte':'#e5d5b9'}[detail.drink] || '#805036');
   slipElement.innerHTML=detail.phase==='counter' && detail.reward?`<span>FRESHLY EARNED</span><strong>${detail.reward}</strong>`:ready?'<span>FOR YOUR GUEST</span><strong>made with care.</strong>':'<span>ONE THING</span><strong>at a time.</strong>';

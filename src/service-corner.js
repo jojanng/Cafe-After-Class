@@ -1,10 +1,9 @@
 import * as THREE from 'three';
 import {RoundedBoxGeometry} from 'three/addons/geometries/RoundedBoxGeometry.js';
 import {mergeGeometries} from 'three/addons/utils/BufferGeometryUtils.js';
-import {oakGrain, paintedMap, stillLife} from './corner-materials.js';
-import { MACHINE_POSITION, MACHINE_YAW } from './fixed-room.js';
-
-const finish = (color, roughness=.72, metalness=0) => new THREE.MeshStandardMaterial({color, roughness, metalness});
+import {finish, oakGrain, paintedMap, stillLife} from './corner-materials.js';
+import {COUNTER, MACHINE_POSITION, MACHINE_YAW, WORKTOP_Y} from './fixed-room.js';
+import {createServiceCounter} from './service-counter.js';
 
 // Batch fixed sub-parts by material within each prop.
 function workshop() {
@@ -44,25 +43,6 @@ function workshop() {
     return group;
   }
   return {mesh,box,cylinder,rod,batch};
-}
-
-function roundedOutline(s, x, z, r) {
-  s.moveTo(-x+r,-z);s.lineTo(x-r,-z);s.quadraticCurveTo(x,-z,x,-z+r);
-  s.lineTo(x,z-r);s.quadraticCurveTo(x,z,x-r,z);s.lineTo(-x+r,z);s.quadraticCurveTo(-x,z,-x,z-r);
-  s.lineTo(-x,-z+r);s.quadraticCurveTo(-x,-z,-x+r,-z);
-  return s;
-}
-
-// The plan radius is independent of thickness. An optional opening turns a slab into a rim.
-function curvedSlab(width,depth,height,radius,bevel=.025,rimWidth=0) {
-  const x=width/2-bevel, z=depth/2-bevel;
-  const s=roundedOutline(new THREE.Shape(),x,z,radius);
-  if (rimWidth) s.holes.push(roundedOutline(new THREE.Path(),x-rimWidth,z-rimWidth,radius-rimWidth));
-  const geo=new THREE.ExtrudeGeometry(s,{depth:height-2*bevel,bevelEnabled:true,bevelSegments:3,bevelSize:bevel,bevelThickness:bevel,curveSegments:9});
-  geo.rotateX(-Math.PI/2);geo.translate(0,bevel,0);
-  const uv=geo.attributes.uv, pos=geo.attributes.position;
-  for(let i=0;i<uv.count;i++)uv.setXY(i,pos.getX(i)/width+.5,(pos.getZ(i)+pos.getY(i))/depth+.5);
-  return geo;
 }
 
 // Light trapped at a surface contact. The feather belongs to the object and stays under its footprint.
@@ -115,18 +95,7 @@ export function createServiceCorner(scene, metalReflections) {
   }
   const woodAccent=finish('#ad7a52');
   const contactShade=contactMaterial();
-  const bar=workshop();
-  bar.mesh(curvedSlab(5.43,1.89,.17,.43),reveal,.2,.014,.65);
-  bar.mesh(curvedSlab(5.64,2.08,1.51,.50),charcoal,.2,.16,.65);
-  bar.mesh(curvedSlab(5.65,2.09,.042,.50,.009),copper,.2,1.63,.65);
-  bar.mesh(curvedSlab(5.71,2.13,.065,.52,.012),reveal,.2,1.667,.65);
-  bar.mesh(curvedSlab(5.85,2.28,.226,.56,.028),oak,.2,1.732,.65);
-  // Three broad inset joinery panels form the customer-facing apron.
-  for(const x of [-1.23,.20,1.63])bar.box(1.417,1.38,.024,lacquer,x,.907,1.687,.011);
-  // The smoked wood tray has a raised rim and a removable cork liner. Its left edge clears the served glass.
-  bar.mesh(curvedSlab(1.13,.88,.074,.16,.009),walnut,.87,1.958,1.05);
-  bar.mesh(curvedSlab(1.12,.87,.035,.156,.004,.045),walnut,.87,2.029,1.05);
-  bar.mesh(curvedSlab(1.025,.777,.02,.111,.003),finish('#bf9f76'),.87,2.032,1.05);
+  const {counter, surface} = createServiceCounter(workshop());
 
   const machine=workshop();
   // Local origin is its base. The chassis encloses the pump; the brew bay is open at the front.
@@ -179,9 +148,9 @@ export function createServiceCorner(scene, metalReflections) {
   // Turn only the machine; the counter and guest pickup still face world +Z.
   const espresso=machine.batch();espresso.position.set(...MACHINE_POSITION);
   espresso.scale.setScalar(.96);espresso.rotation.y=MACHINE_YAW;
-  const service=bar.batch();service.add(espresso);scene.add(service);
-  contact(service,contactShade,6.34,2.70,.2,.020,.65);
-  contact(service,contactShade,2.15,1.12,espresso.position.x,1.962,espresso.position.z);
+  counter.add(espresso);scene.add(counter);
+  contact(counter,contactShade,COUNTER.width+.32,COUNTER.depth+.27,COUNTER.x,.020,COUNTER.z);
+  contact(counter,contactShade,2.12,1.07,espresso.position.x,WORKTOP_Y+.002,espresso.position.z);
 
   const back=workshop();
   back.box(4.6,1.13,.76,charcoal,.2,.70,-2.68,.045);
@@ -222,4 +191,5 @@ export function createServiceCorner(scene, metalReflections) {
     frame.mesh(new THREE.PlaneGeometry(.885,1.19),stillLife(subject),0,0,.023);
     const group=frame.batch();group.position.set(x,3.47,-3.085);scene.add(group);
   }
+  return {prepSurface: surface, contactShade};
 }
